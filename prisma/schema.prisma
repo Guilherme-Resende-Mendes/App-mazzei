@@ -1,0 +1,224 @@
+// Prisma schema - Mazzei API
+// Nomes de dominio em ingles; tabelas/colunas mapeadas para o portugues (contrato SQL original).
+// Timestamps em UTC (timestamptz). Soft delete via deleted_at onde faz sentido.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/infrastructure/database/prisma/generated"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum Role {
+  OWNER  @map("owner")
+  CLIENT @map("client")
+  ADMIN  @map("admin")
+}
+
+// Catalogo fechado da plataforma (antes tabela `areas`, agora enum nativo)
+enum Area {
+  COZINHA @map("cozinha")
+  SALAO   @map("salao")
+  BAR     @map("bar")
+}
+
+enum Badge {
+  PONTUAL  @map("pontual")
+  FLEXIVEL @map("flexivel")
+}
+
+enum JobStatus {
+  ABERTA     @map("aberta")
+  PREENCHIDA @map("preenchida")
+  CANCELADA  @map("cancelada")
+  CONCLUIDA  @map("concluida")
+}
+
+enum HiringStatus {
+  SOLICITADA @map("solicitada")
+  ACEITA     @map("aceita")
+  RECUSADA   @map("recusada")
+  CONCLUIDA  @map("concluida")
+  CANCELADA  @map("cancelada")
+}
+
+// ============================================================
+// Auth
+// ============================================================
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("senha_hash")
+  role         Role      @map("papel")
+  active       Boolean   @default(true) @map("ativo")
+  lastLoginAt  DateTime? @map("ultimo_login_em") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  restaurant    Restaurant?
+  candidate     Candidate?
+  refreshTokens RefreshToken[]
+
+  @@index([role])
+  @@map("usuarios")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("usuario_id") @db.Uuid
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expira_em") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revogado_em") @db.Timestamptz(6)
+  userAgent String?   @map("user_agent") @db.VarChar(255)
+  ip        String?   @db.VarChar(64)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+// ============================================================
+// Catalogo (cargos por area + nivel)
+// ============================================================
+
+model Position {
+  id        String   @id @default(uuid()) @db.Uuid
+  area      Area     @map("area_id")
+  name      String   @map("nome") @db.VarChar(100)
+  level     Int      @map("nivel")
+  active    Boolean  @default(true) @map("ativo")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  candidates Candidate[]
+  jobs       Job[]
+
+  @@index([area])
+  @@map("cargos")
+}
+
+// ============================================================
+// Perfis
+// ============================================================
+
+model Restaurant {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @unique @map("usuario_id") @db.Uuid
+  name             String    @map("nome") @db.VarChar(255)
+  cpfCnpj          String    @unique @map("cpf_cnpj") @db.VarChar(20)
+  address          String    @map("endereco")
+  phone            String    @map("telefone") @db.VarChar(30)
+  requirementLevel Int?      @map("nivel_exigencia")
+  active           Boolean   @default(true) @map("ativo")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  user    User     @relation(fields: [userId], references: [id])
+  jobs    Job[]
+  hirings Hiring[]
+
+  @@map("restaurantes")
+}
+
+model Candidate {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @unique @map("usuario_id") @db.Uuid
+  name           String    @map("nome") @db.VarChar(255)
+  document       String    @unique @map("documento") @db.VarChar(30)
+  address        String    @map("endereco")
+  phone          String    @map("telefone") @db.VarChar(30)
+  positionId     String    @map("cargo_id") @db.Uuid
+  expectedSalary Decimal   @map("pretensao_salarial") @db.Decimal(10, 2)
+  overallRating  Decimal   @default(0) @map("nota_geral") @db.Decimal(3, 2)
+  bio            String?   @map("bio")
+  active         Boolean   @default(true) @map("ativo")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  user     User             @relation(fields: [userId], references: [id])
+  position Position         @relation(fields: [positionId], references: [id])
+  badges   CandidateBadge[]
+  hirings  Hiring[]
+
+  @@index([positionId])
+  @@map("candidatos")
+}
+
+model CandidateBadge {
+  candidateId String   @map("candidato_id") @db.Uuid
+  badge       Badge    @map("selo")
+  grantedAt   DateTime @map("concedido_em") @db.Timestamptz(6)
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@id([candidateId, badge])
+  @@map("candidato_selos")
+}
+
+// ============================================================
+// Vagas e contratacoes
+// ============================================================
+
+model Job {
+  id           String    @id @default(uuid()) @db.Uuid
+  restaurantId String    @map("restaurante_id") @db.Uuid
+  positionId   String    @map("cargo_id") @db.Uuid
+  startDate    DateTime  @map("inicio_em") @db.Timestamptz(6)
+  endDate      DateTime  @map("fim_em") @db.Timestamptz(6)
+  peopleCount  Int       @default(1) @map("qtd_pessoas")
+  status       JobStatus @default(ABERTA) @map("status")
+  active       Boolean   @default(true) @map("active")
+  notes        String?   @map("observacao")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  position   Position   @relation(fields: [positionId], references: [id])
+  hirings    Hiring[]
+
+  @@index([restaurantId])
+  @@index([positionId])
+  @@index([status, startDate])
+  @@index([active])
+  @@map("vagas")
+}
+
+model Hiring {
+  id                String       @id @default(uuid()) @db.Uuid
+  jobId             String       @map("vaga_id") @db.Uuid
+  candidateId       String       @map("candidato_id") @db.Uuid
+  restaurantId      String       @map("restaurante_id") @db.Uuid
+  agreedPrice       Decimal?     @map("preco_acordado") @db.Decimal(10, 2)
+  status            HiringStatus @default(SOLICITADA) @map("status")
+  requestedAt       DateTime     @map("solicitado_em") @db.Timestamptz(6)
+  respondedAt       DateTime?    @map("respondido_em") @db.Timestamptz(6)
+  deliveryRating    Decimal?     @map("nota_entrega") @db.Decimal(3, 2)
+  punctualityRating Decimal?     @map("nota_pontualidade") @db.Decimal(3, 2)
+  cancellationFault Boolean      @default(false) @map("attr_cancelamento")
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  job        Job        @relation(fields: [jobId], references: [id])
+  candidate  Candidate  @relation(fields: [candidateId], references: [id])
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@unique([jobId, candidateId])
+  @@index([jobId])
+  @@index([candidateId])
+  @@index([status])
+  @@map("contratacoes")
+}

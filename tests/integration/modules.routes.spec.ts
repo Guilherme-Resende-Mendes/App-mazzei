@@ -1,0 +1,425 @@
+import request from 'supertest';
+import type { Express } from 'express';
+import { createApp } from '../../src/app';
+import { container } from '../../src/config/container';
+import { TOKENS } from '../../src/config/tokens';
+import { Position } from '../../src/domain/entities/Position';
+import { Area } from '../../src/domain/enums/Area';
+import { Role } from '../../src/domain/enums/Role';
+import { JwtTokenProvider } from '../../src/infrastructure/providers/auth/JwtTokenProvider';
+import { TransactionalContext } from '../../src/application/interfaces/UnitOfWork';
+import { InMemoryUserRepository } from '../support/InMemoryUserRepository';
+import { InMemoryRefreshTokenRepository } from '../support/InMemoryRefreshTokenRepository';
+import { InMemoryRestaurantRepository } from '../support/InMemoryRestaurantRepository';
+import { InMemoryCandidateRepository } from '../support/InMemoryCandidateRepository';
+import { InMemoryPositionRepository } from '../support/InMemoryPositionRepository';
+import { InMemoryJobRepository } from '../support/InMemoryJobRepository';
+import { InMemoryHiringRepository } from '../support/InMemoryHiringRepository';
+import { InMemoryUnitOfWork } from '../support/InMemoryUnitOfWork';
+
+const POSITION_ID = '11111111-1111-4111-8111-111111111111';
+
+describe('Modules routes (integration)', () => {
+  let app: Express;
+  let ownerToken: string;
+  let clientToken: string;
+  let adminToken: string;
+  let candidateId: string;
+
+  const position = Position.restore({
+    id: POSITION_ID,
+    area: Area.COZINHA,
+    name: 'Cozinheiro',
+    level: 2,
+    active: true,
+    createdAt: new Date(),
+  });
+
+  beforeAll(async () => {
+    const restaurants = new InMemoryRestaurantRepository();
+    const candidates = new InMemoryCandidateRepository();
+    const positions = new InMemoryPositionRepository([position]);
+    const jobs = new InMemoryJobRepository();
+    const hirings = new InMemoryHiringRepository();
+    const ctx: TransactionalContext = {
+      jobs,
+      hirings,
+      candidates,
+      restaurants,
+    };
+
+    container.registerInstance(
+      TOKENS.UserRepository,
+      new InMemoryUserRepository(),
+    );
+    container.registerInstance(
+      TOKENS.RefreshTokenRepository,
+      new InMemoryRefreshTokenRepository(),
+    );
+    container.registerInstance(TOKENS.RestaurantRepository, restaurants);
+    container.registerInstance(TOKENS.CandidateRepository, candidates);
+    container.registerInstance(TOKENS.PositionRepository, positions);
+    container.registerInstance(TOKENS.JobRepository, jobs);
+    container.registerInstance(TOKENS.HiringRepository, hirings);
+    container.registerInstance(TOKENS.UnitOfWork, new InMemoryUnitOfWork(ctx));
+
+    app = createApp();
+
+    await request(app).post('/api/auth/register').send({
+      email: 'owner@example.com',
+      password: 'supersecret',
+      role: 'OWNER',
+    });
+    const ownerLogin = await request(app).post('/api/auth/login').send({
+      email: 'owner@example.com',
+      password: 'supersecret',
+    });
+    ownerToken = ownerLogin.body.data.accessToken;
+
+    await request(app).post('/api/auth/register').send({
+      email: 'client@example.com',
+      password: 'supersecret',
+      role: 'CLIENT',
+    });
+    const clientLogin = await request(app).post('/api/auth/login').send({
+      email: 'client@example.com',
+      password: 'supersecret',
+    });
+    clientToken = clientLogin.body.data.accessToken;
+
+    adminToken = new JwtTokenProvider().signAccessToken({
+      sub: 'admin-1',
+      role: Role.ADMIN,
+    });
+  });
+
+  const owner = (): string => `Bearer ${ownerToken}`;
+  const client = (): string => `Bearer ${clientToken}`;
+  const admin = (): string => `Bearer ${adminToken}`;
+
+  async function createJob(peopleCount = 1): Promise<string> {
+    const res = await request(app)
+      .post('/api/jobs')
+      .set('Authorization', owner())
+      .send({
+        positionId: POSITION_ID,
+        startDate: '15/06/2030 18:00',
+        endDate: '15/06/2030 23:00',
+        peopleCount,
+      });
+    return res.body.data.id as string;
+  }
+
+  it('permite criar vaga inativa (fechada para candidaturas)', async () => {
+    const created = await request(app)
+      .post('/api/jobs')
+      .set('Authorization', owner())
+      .send({
+        positionId: POSITION_ID,
+        startDate: '15/06/2030 18:00',
+        endDate: '15/06/2030 23:00',
+        peopleCount: 1,
+        active: false,
+      });
+
+    expect(created.status).toBe(201);
+    expect(created.body.data.active).toBe(false);
+    expect(created.body.data.status).toBe('ABERTA');
+
+    const apply = await request(app)
+      .post(`/api/jobs/${created.body.data.id}/applications`)
+      .set('Authorization', client());
+
+    expect(apply.status).toBe(409);
+  });
+
+  it('executa o fluxo completo de ponta a ponta', async () => {
+    const restaurant = await request(app)
+      .post('/api/restaurants')
+      .set('Authorization', owner())
+      .send({
+        name: 'Cantina',
+        cpfCnpj: '12345678000199',
+        address: 'Rua A, 100',
+        phone: '11999999999',
+      });
+    expect(restaurant.status).toBe(201);
+
+    const candidate = await request(app)
+      .post('/api/candidates')
+      .set('Authorization', client())
+      .send({
+        name: 'Freelancer',
+        document: '12345678901',
+        address: 'Rua B, 200',
+        phone: '11988888888',
+        positionId: POSITION_ID,
+        expectedSalary: 150,
+      });
+    expect(candidate.status).toBe(201);
+    candidateId = candidate.body.data.id;
+
+    const job = await request(app)
+      .post('/api/jobs')
+      .set('Authorization', owner())
+      .send({
+        positionId: POSITION_ID,
+        startDate: '15/06/2030 18:00',
+        endDate: '15/06/2030 23:00',
+        peopleCount: 1,
+      });
+    expect(job.status).toBe(201);
+    const jobId = job.body.data.id as string;
+
+    const open = await request(app)
+      .get('/api/jobs')
+      .set('Authorization', client());
+    expect(open.status).toBe(200);
+    expect(open.body.data.total).toBe(1);
+
+    const apply = await request(app)
+      .post(`/api/jobs/${jobId}/applications`)
+      .set('Authorization', client());
+    expect(apply.status).toBe(201);
+    const hiringId = apply.body.data.id as string;
+
+    const applyAgain = await request(app)
+      .post(`/api/jobs/${jobId}/applications`)
+      .set('Authorization', client());
+    expect(applyAgain.status).toBe(409);
+
+    const listApps = await request(app)
+      .get(`/api/jobs/${jobId}/applications`)
+      .set('Authorization', owner());
+    expect(listApps.status).toBe(200);
+    expect(listApps.body.data).toHaveLength(1);
+
+    const accept = await request(app)
+      .post(`/api/applications/${hiringId}/accept`)
+      .set('Authorization', owner())
+      .send({ agreedPrice: 200 });
+    expect(accept.status).toBe(200);
+    expect(accept.body.data.status).toBe('ACEITA');
+
+    const finish = await request(app)
+      .post(`/api/jobs/${jobId}/finish`)
+      .set('Authorization', owner())
+      .send({
+        evaluations: [{ hiringId, deliveryRating: 5, punctualityRating: 4 }],
+      });
+    expect(finish.status).toBe(200);
+    expect(finish.body.data.status).toBe('CONCLUIDA');
+
+    const reviews = await request(app)
+      .get('/api/candidates/me/reviews')
+      .set('Authorization', client());
+    expect(reviews.status).toBe(200);
+    expect(reviews.body.data).toHaveLength(1);
+    expect(reviews.body.data[0].average).toBe(4.5);
+
+    const me = await request(app)
+      .get('/api/candidates/me')
+      .set('Authorization', client());
+    expect(me.body.data.overallRating).toBe(4.5);
+  });
+
+  it('le e atualiza perfis e lista o catalogo de cargos', async () => {
+    const restaurantMe = await request(app)
+      .get('/api/restaurants/me')
+      .set('Authorization', owner());
+    expect(restaurantMe.status).toBe(200);
+
+    const restaurantUpdate = await request(app)
+      .put('/api/restaurants/me')
+      .set('Authorization', owner())
+      .send({ name: 'Cantina Nova', requirementLevel: 3 });
+    expect(restaurantUpdate.status).toBe(200);
+    expect(restaurantUpdate.body.data.name).toBe('Cantina Nova');
+
+    const candidateUpdate = await request(app)
+      .put('/api/candidates/me')
+      .set('Authorization', client())
+      .send({ expectedSalary: 180 });
+    expect(candidateUpdate.status).toBe(200);
+    expect(candidateUpdate.body.data.expectedSalary).toBe(180);
+
+    const candidateById = await request(app)
+      .get(`/api/candidates/${candidateId}`)
+      .set('Authorization', owner());
+    expect(candidateById.status).toBe(200);
+
+    const positions = await request(app)
+      .get('/api/positions')
+      .set('Authorization', client());
+    expect(positions.status).toBe(200);
+    expect(positions.body.data.length).toBeGreaterThan(0);
+  });
+
+  it('percorre o ciclo de vida da vaga (update/activate/deactivate/reschedule/cancel/delete)', async () => {
+    const jobId = await createJob(1);
+
+    const get = await request(app)
+      .get(`/api/jobs/${jobId}`)
+      .set('Authorization', client());
+    expect(get.status).toBe(200);
+
+    const update = await request(app)
+      .put(`/api/jobs/${jobId}`)
+      .set('Authorization', owner())
+      .send({ peopleCount: 3, notes: 'turno de sabado' });
+    expect(update.status).toBe(200);
+    expect(update.body.data.peopleCount).toBe(3);
+
+    const deactivate = await request(app)
+      .post(`/api/jobs/${jobId}/deactivate`)
+      .set('Authorization', owner());
+    expect(deactivate.status).toBe(200);
+    expect(deactivate.body.data.active).toBe(false);
+
+    const activate = await request(app)
+      .post(`/api/jobs/${jobId}/activate`)
+      .set('Authorization', owner());
+    expect(activate.status).toBe(200);
+    expect(activate.body.data.active).toBe(true);
+
+    const reschedule = await request(app)
+      .post(`/api/jobs/${jobId}/reschedule`)
+      .set('Authorization', owner())
+      .send({
+        startDate: '20/07/2030 10:00',
+        endDate: '20/07/2030 16:00',
+      });
+    expect(reschedule.status).toBe(200);
+    expect(reschedule.body.data.startDate).toBe('20/07/2030 10:00');
+
+    const mine = await request(app)
+      .get('/api/jobs/mine')
+      .set('Authorization', owner());
+    expect(mine.status).toBe(200);
+    expect(mine.body.data.total).toBeGreaterThan(0);
+
+    const cancel = await request(app)
+      .post(`/api/jobs/${jobId}/cancel`)
+      .set('Authorization', owner());
+    expect(cancel.status).toBe(200);
+    expect(cancel.body.data.status).toBe('CANCELADA');
+
+    const toDelete = await createJob(1);
+    const remove = await request(app)
+      .delete(`/api/jobs/${toDelete}`)
+      .set('Authorization', owner());
+    expect(remove.status).toBe(200);
+  });
+
+  it('lista e gerencia candidaturas (mine/reject/cancel)', async () => {
+    const jobId = await createJob(1);
+
+    const apply = await request(app)
+      .post(`/api/jobs/${jobId}/applications`)
+      .set('Authorization', client());
+    expect(apply.status).toBe(201);
+    const hiringId = apply.body.data.id as string;
+
+    const mine = await request(app)
+      .get('/api/applications/mine')
+      .set('Authorization', client());
+    expect(mine.status).toBe(200);
+    expect(mine.body.data.length).toBeGreaterThan(0);
+
+    const reject = await request(app)
+      .post(`/api/applications/${hiringId}/reject`)
+      .set('Authorization', owner());
+    expect(reject.status).toBe(200);
+    expect(reject.body.data.status).toBe('RECUSADA');
+
+    const jobId2 = await createJob(1);
+    const apply2 = await request(app)
+      .post(`/api/jobs/${jobId2}/applications`)
+      .set('Authorization', client());
+    const hiringId2 = apply2.body.data.id as string;
+
+    const cancel = await request(app)
+      .post(`/api/applications/${hiringId2}/cancel`)
+      .set('Authorization', client());
+    expect(cancel.status).toBe(200);
+    expect(cancel.body.data.status).toBe('CANCELADA');
+
+    const reapply = await request(app)
+      .post(`/api/jobs/${jobId2}/applications`)
+      .set('Authorization', client());
+    expect(reapply.status).toBe(201);
+    expect(reapply.body.data.id).toBe(hiringId2);
+    expect(reapply.body.data.status).toBe('SOLICITADA');
+  });
+
+  it('concede e revoga selos (ADMIN)', async () => {
+    const grant = await request(app)
+      .post(`/api/candidates/${candidateId}/badges`)
+      .set('Authorization', admin())
+      .send({ badge: 'PONTUAL' });
+    expect(grant.status).toBe(201);
+    expect(grant.body.data.badges).toHaveLength(1);
+
+    const forbidden = await request(app)
+      .post(`/api/candidates/${candidateId}/badges`)
+      .set('Authorization', client())
+      .send({ badge: 'FLEXIVEL' });
+    expect(forbidden.status).toBe(403);
+
+    const revoke = await request(app)
+      .delete(`/api/candidates/${candidateId}/badges/PONTUAL`)
+      .set('Authorization', admin());
+    expect(revoke.status).toBe(200);
+    expect(revoke.body.data.badges).toHaveLength(0);
+  });
+
+  it('aplica RBAC: cliente nao cria vaga (403) e owner nao se candidata (403)', async () => {
+    const clientCreatesJob = await request(app)
+      .post('/api/jobs')
+      .set('Authorization', client())
+      .send({
+        positionId: POSITION_ID,
+        startDate: '15/06/2030 18:00',
+        endDate: '15/06/2030 23:00',
+        peopleCount: 1,
+      });
+    expect(clientCreatesJob.status).toBe(403);
+
+    const jobId = await createJob(1);
+    const ownerApplies = await request(app)
+      .post(`/api/jobs/${jobId}/applications`)
+      .set('Authorization', owner());
+    expect(ownerApplies.status).toBe(403);
+  });
+
+  it('bloqueia acesso sem token (401)', async () => {
+    const res = await request(app).get('/api/jobs/mine');
+    expect(res.status).toBe(401);
+  });
+
+  it('remove (soft delete) perfis', async () => {
+    const candidateRemoval = await request(app)
+      .delete('/api/candidates/me')
+      .set('Authorization', client());
+    expect(candidateRemoval.status).toBe(200);
+
+    const restaurantRemoval = await request(app)
+      .delete('/api/restaurants/me')
+      .set('Authorization', owner());
+    expect(restaurantRemoval.status).toBe(200);
+  });
+
+  it('rejeita campos extras nos validators (400)', async () => {
+    const res = await request(app)
+      .post('/api/restaurants')
+      .set('Authorization', owner())
+      .send({
+        name: 'X',
+        cpfCnpj: '12345678000188',
+        address: 'rua',
+        phone: '11999999999',
+        hacker: true,
+      });
+    expect(res.status).toBe(400);
+  });
+});

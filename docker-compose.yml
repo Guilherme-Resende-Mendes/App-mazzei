@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mazzei-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mazzei
+      POSTGRES_PASSWORD: mazzei
+      POSTGRES_DB: mazzei
+    ports:
+      - '5432:5432'
+    volumes:
+      - mazzei-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mazzei -d mazzei']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      target: production
+    container_name: mazzei-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3333
+      API_PREFIX: /api
+      DATABASE_URL: postgresql://mazzei:mazzei@db:5432/mazzei?schema=public
+      JWT_ACCESS_SECRET: change-me-access-secret-please-use-a-long-random-value
+      JWT_REFRESH_SECRET: change-me-refresh-secret-please-use-a-long-random-value
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      BCRYPT_SALT_ROUNDS: 10
+      CORS_ORIGINS: http://localhost:3000
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX: 100
+    ports:
+      - '3333:3333'
+    command: sh -c "npx prisma migrate deploy && node dist/server.js"
+
+volumes:
+  mazzei-db-data:
