@@ -29,9 +29,11 @@ describe('Restaurant entity', () => {
       address: 'y',
       phone: '8',
       requirementLevel: 4,
+      bio: 'Restaurante familiar',
     });
     expect(restaurant.name).toBe('B');
     expect(restaurant.requirementLevel).toBe(4);
+    expect(restaurant.bio).toBe('Restaurante familiar');
 
     expect(restaurant.isDeleted()).toBe(false);
     restaurant.softDelete();
@@ -49,13 +51,11 @@ describe('Candidate entity', () => {
       address: 'x',
       phone: '9',
       positionId: 'p',
-      expectedSalary: 100,
     });
 
-    candidate.update({ name: 'B', bio: 'ola', expectedSalary: 200 });
+    candidate.update({ name: 'B', bio: 'ola' });
     expect(candidate.name).toBe('B');
     expect(candidate.bio).toBe('ola');
-    expect(candidate.expectedSalary).toBe(200);
 
     candidate.softDelete();
     expect(candidate.isDeleted()).toBe(true);

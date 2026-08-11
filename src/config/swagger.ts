@@ -24,7 +24,7 @@ import {
   rescheduleJobBodySchema,
   updateJobBodySchema,
 } from '../http/validators/job.validators';
-import { acceptCandidateBodySchema } from '../http/validators/application.validators';
+import { acceptCandidateBodySchema, applyForJobBodySchema } from '../http/validators/application.validators';
 import { env } from './env';
 
 extendZodWithOpenApi(z);
@@ -205,15 +205,24 @@ const restaurantResponseSchema = registry.register(
       id: z.string(),
       userId: z.string(),
       name: z.string(),
-      cpfCnpj: z.string(),
       address: z.string(),
-      phone: z.string(),
       requirementLevel: z.number().nullable(),
+      bio: z.string().nullable(),
       active: z.boolean(),
       createdAt: z.string(),
       updatedAt: z.string(),
     })
     .openapi('Restaurant'),
+);
+
+const restaurantCpfCnpjResponseSchema = registry.register(
+  'RestaurantCpfCnpj',
+  z.object({ cpfCnpj: z.string() }).openapi('RestaurantCpfCnpj'),
+);
+
+const restaurantPhoneResponseSchema = registry.register(
+  'RestaurantPhone',
+  z.object({ phone: z.string() }).openapi('RestaurantPhone'),
 );
 
 const candidateBadgeSchema = z.object({
@@ -228,11 +237,8 @@ const candidateResponseSchema = registry.register(
       id: z.string(),
       userId: z.string(),
       name: z.string(),
-      document: z.string(),
       address: z.string(),
-      phone: z.string(),
       positionId: z.string(),
-      expectedSalary: z.number(),
       overallRating: z.number(),
       bio: z.string().nullable(),
       badges: z.array(candidateBadgeSchema),
@@ -241,6 +247,16 @@ const candidateResponseSchema = registry.register(
       updatedAt: z.string(),
     })
     .openapi('Candidate'),
+);
+
+const candidateCpfResponseSchema = registry.register(
+  'CandidateCpf',
+  z.object({ cpf: z.string() }).openapi('CandidateCpf'),
+);
+
+const candidatePhoneResponseSchema = registry.register(
+  'CandidatePhone',
+  z.object({ phone: z.string() }).openapi('CandidatePhone'),
 );
 
 const positionResponseSchema = registry.register(
@@ -296,6 +312,7 @@ const hiringResponseSchema = registry.register(
       jobId: z.string(),
       candidateId: z.string(),
       restaurantId: z.string(),
+      hourlyRate: z.string(),
       agreedPrice: z.string().nullable(),
       status: z.enum([
         'SOLICITADA',
@@ -367,6 +384,38 @@ registry.registerPath({
     200: {
       description: 'Perfil',
       content: jsonContent(successEnvelope(restaurantResponseSchema)),
+    },
+    401: errorResponse('Nao autenticado'),
+    404: errorResponse('Perfil nao encontrado'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/restaurants/me/cpf-cnpj',
+  tags: ['Restaurants'],
+  summary: 'Retorna o CPF/CNPJ do restaurante autenticado (OWNER)',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: 'CPF/CNPJ do usuario autenticado',
+      content: jsonContent(successEnvelope(restaurantCpfCnpjResponseSchema)),
+    },
+    401: errorResponse('Nao autenticado'),
+    404: errorResponse('Perfil nao encontrado'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/restaurants/me/phone',
+  tags: ['Restaurants'],
+  summary: 'Retorna o telefone do restaurante autenticado (OWNER)',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: 'Telefone do usuario autenticado',
+      content: jsonContent(successEnvelope(restaurantPhoneResponseSchema)),
     },
     401: errorResponse('Nao autenticado'),
     404: errorResponse('Perfil nao encontrado'),
@@ -460,6 +509,40 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'get',
+  path: '/candidates/me/cpf',
+  tags: ['Candidates'],
+  summary: 'Retorna o CPF do candidato autenticado (CLIENT)',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: 'CPF do usuario autenticado',
+      content: jsonContent(successEnvelope(candidateCpfResponseSchema)),
+    },
+    401: errorResponse('Nao autenticado'),
+    403: errorResponse('Sem permissao'),
+    404: errorResponse('Perfil nao encontrado'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/candidates/me/phone',
+  tags: ['Candidates'],
+  summary: 'Retorna o telefone do candidato autenticado (CLIENT)',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: 'Telefone do usuario autenticado',
+      content: jsonContent(successEnvelope(candidatePhoneResponseSchema)),
+    },
+    401: errorResponse('Nao autenticado'),
+    403: errorResponse('Sem permissao'),
+    404: errorResponse('Perfil nao encontrado'),
+  },
+});
+
+registry.registerPath({
   method: 'put',
   path: '/candidates/me',
   tags: ['Candidates'],
@@ -497,7 +580,7 @@ registry.registerPath({
   method: 'get',
   path: '/candidates/{id}',
   tags: ['Candidates'],
-  summary: 'Retorna um perfil de candidato por id',
+  summary: 'Retorna um perfil de candidato por id (OWNER ou ADMIN)',
   security: [{ bearerAuth: [] }],
   request: idParam,
   responses: {
@@ -506,6 +589,7 @@ registry.registerPath({
       content: jsonContent(successEnvelope(candidateResponseSchema)),
     },
     401: errorResponse('Nao autenticado'),
+    403: errorResponse('Sem permissao'),
     404: errorResponse('Perfil nao encontrado'),
   },
 });
@@ -777,7 +861,17 @@ registry.registerPath({
   tags: ['Applications'],
   summary: 'Candidata-se a uma vaga (CLIENT)',
   security: [{ bearerAuth: [] }],
-  request: idParam,
+  request: {
+    ...idParam,
+    body: {
+      content: {
+        'application/json': {
+          schema: applyForJobBodySchema,
+          example: { hourlyRate: 150 },
+        },
+      },
+    },
+  },
   responses: {
     201: {
       description: 'Candidatura criada',

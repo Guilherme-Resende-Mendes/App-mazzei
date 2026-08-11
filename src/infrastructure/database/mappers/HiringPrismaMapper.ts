@@ -2,6 +2,7 @@ import { Hiring } from '../../../domain/entities/Hiring';
 import { Hiring as PrismaHiring } from '../prisma/generated/client';
 import { HiringStatusMapper } from './HiringStatusMapper';
 import {
+  decimalToNumber,
   nullableDecimalToMoneyNumber,
   nullableDecimalToNumber,
 } from './prismaFieldHelpers';
@@ -13,6 +14,7 @@ export class HiringPrismaMapper {
       jobId: row.jobId,
       candidateId: row.candidateId,
       restaurantId: row.restaurantId,
+      hourlyRate: decimalToNumber(row.hourlyRate),
       agreedPrice: nullableDecimalToMoneyNumber(row.agreedPrice),
       status: HiringStatusMapper.toDomain(row.status),
       requestedAt: row.requestedAt,

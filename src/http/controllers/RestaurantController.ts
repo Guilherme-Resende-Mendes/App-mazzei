@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
 import { CreateRestaurantProfileUseCase } from '../../application/use-cases/profiles/CreateRestaurantProfileUseCase';
 import { DeleteRestaurantProfileUseCase } from '../../application/use-cases/profiles/DeleteRestaurantProfileUseCase';
+import { GetRestaurantOwnCpfCnpjUseCase } from '../../application/use-cases/profiles/GetRestaurantOwnCpfCnpjUseCase';
+import { GetRestaurantOwnPhoneUseCase } from '../../application/use-cases/profiles/GetRestaurantOwnPhoneUseCase';
 import { GetRestaurantProfileUseCase } from '../../application/use-cases/profiles/GetRestaurantProfileUseCase';
 import { UpdateRestaurantProfileUseCase } from '../../application/use-cases/profiles/UpdateRestaurantProfileUseCase';
 import { sendSuccess } from '../../shared/utils/httpResponse';
@@ -11,6 +13,8 @@ export class RestaurantController {
     private readonly createProfile: CreateRestaurantProfileUseCase,
     private readonly updateProfile: UpdateRestaurantProfileUseCase,
     private readonly getProfile: GetRestaurantProfileUseCase,
+    private readonly getOwnCpfCnpj: GetRestaurantOwnCpfCnpjUseCase,
+    private readonly getOwnPhone: GetRestaurantOwnPhoneUseCase,
     private readonly deleteProfile: DeleteRestaurantProfileUseCase,
   ) {}
 
@@ -22,6 +26,7 @@ export class RestaurantController {
       address: req.body.address,
       phone: req.body.phone,
       requirementLevel: req.body.requirementLevel ?? null,
+      bio: req.body.bio ?? null,
     });
 
     return sendSuccess(res, result, 201);
@@ -34,6 +39,7 @@ export class RestaurantController {
       address: req.body.address,
       phone: req.body.phone,
       requirementLevel: req.body.requirementLevel,
+      bio: req.body.bio,
     });
 
     return sendSuccess(res, result);
@@ -41,6 +47,16 @@ export class RestaurantController {
 
   me = async (req: Request, res: Response): Promise<Response> => {
     const result = await this.getProfile.execute(getUserId(req));
+    return sendSuccess(res, result);
+  };
+
+  myCpfCnpj = async (req: Request, res: Response): Promise<Response> => {
+    const result = await this.getOwnCpfCnpj.execute(getUserId(req));
+    return sendSuccess(res, result);
+  };
+
+  myPhone = async (req: Request, res: Response): Promise<Response> => {
+    const result = await this.getOwnPhone.execute(getUserId(req));
     return sendSuccess(res, result);
   };
 

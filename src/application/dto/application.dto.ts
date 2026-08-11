@@ -3,6 +3,7 @@ import { HiringStatus } from '../../domain/enums/HiringStatus';
 export interface ApplyForJobInput {
   userId: string;
   jobId: string;
+  hourlyRate: number;
 }
 
 export interface CancelApplicationInput {
@@ -35,6 +36,7 @@ export interface HiringResponseDTO {
   jobId: string;
   candidateId: string;
   restaurantId: string;
+  hourlyRate: string;
   agreedPrice: string | null;
   status: HiringStatus;
   requestedAt: string;

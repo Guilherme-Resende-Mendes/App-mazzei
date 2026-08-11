@@ -16,6 +16,7 @@ export class PrismaRestaurantRepository implements RestaurantRepository {
         address: restaurant.address,
         phone: restaurant.phone,
         requirementLevel: restaurant.requirementLevel,
+        bio: restaurant.bio,
       },
     });
 
@@ -30,6 +31,7 @@ export class PrismaRestaurantRepository implements RestaurantRepository {
         address: restaurant.address,
         phone: restaurant.phone,
         requirementLevel: restaurant.requirementLevel,
+        bio: restaurant.bio,
         active: restaurant.active,
       },
     });

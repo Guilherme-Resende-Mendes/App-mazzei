@@ -6,6 +6,7 @@ export interface RestaurantProps {
   address: string;
   phone: string;
   requirementLevel: number | null;
+  bio: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -20,6 +21,7 @@ export interface CreateRestaurantProps {
   address: string;
   phone: string;
   requirementLevel?: number | null;
+  bio?: string | null;
 }
 
 export interface UpdateRestaurantProps {
@@ -27,6 +29,7 @@ export interface UpdateRestaurantProps {
   address?: string;
   phone?: string;
   requirementLevel?: number | null;
+  bio?: string | null;
 }
 
 /**
@@ -47,6 +50,7 @@ export class Restaurant {
       address: props.address,
       phone: props.phone,
       requirementLevel: props.requirementLevel ?? null,
+      bio: props.bio ?? null,
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -86,6 +90,10 @@ export class Restaurant {
     return this.props.requirementLevel;
   }
 
+  get bio(): string | null {
+    return this.props.bio;
+  }
+
   get active(): boolean {
     return this.props.active;
   }
@@ -109,6 +117,7 @@ export class Restaurant {
     if (changes.requirementLevel !== undefined) {
       this.props.requirementLevel = changes.requirementLevel;
     }
+    if (changes.bio !== undefined) this.props.bio = changes.bio;
     this.props.updatedAt = now;
   }
 

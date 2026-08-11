@@ -9,6 +9,7 @@ export const createRestaurantBodySchema = z
     address: z.string().min(1, 'Endereco obrigatorio'),
     phone: z.string().min(8, 'Telefone invalido').max(30),
     requirementLevel: z.number().int().min(1).max(5).nullable().optional(),
+    bio: z.string().max(2000).nullable().optional(),
   })
   .strict();
 
@@ -18,6 +19,7 @@ export const updateRestaurantBodySchema = z
     address: z.string().min(1).optional(),
     phone: z.string().min(8).max(30).optional(),
     requirementLevel: z.number().int().min(1).max(5).nullable().optional(),
+    bio: z.string().max(2000).nullable().optional(),
   })
   .strict();
 
@@ -28,7 +30,6 @@ export const createCandidateBodySchema = z
     address: z.string().min(1, 'Endereco obrigatorio'),
     phone: z.string().min(8, 'Telefone invalido').max(30),
     positionId: z.uuid('Cargo invalido'),
-    expectedSalary: z.number().min(0, 'Pretensao salarial invalida'),
     bio: z.string().max(2000).nullable().optional(),
   })
   .strict();
@@ -39,7 +40,6 @@ export const updateCandidateBodySchema = z
     address: z.string().min(1).optional(),
     phone: z.string().min(8).max(30).optional(),
     positionId: z.uuid().optional(),
-    expectedSalary: z.number().min(0).optional(),
     bio: z.string().max(2000).nullable().optional(),
   })
   .strict();

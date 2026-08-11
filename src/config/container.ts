@@ -21,10 +21,14 @@ import { RegisterUserUseCase } from '../application/use-cases/auth/RegisterUserU
 import { CreateRestaurantProfileUseCase } from '../application/use-cases/profiles/CreateRestaurantProfileUseCase';
 import { UpdateRestaurantProfileUseCase } from '../application/use-cases/profiles/UpdateRestaurantProfileUseCase';
 import { GetRestaurantProfileUseCase } from '../application/use-cases/profiles/GetRestaurantProfileUseCase';
+import { GetRestaurantOwnCpfCnpjUseCase } from '../application/use-cases/profiles/GetRestaurantOwnCpfCnpjUseCase';
+import { GetRestaurantOwnPhoneUseCase } from '../application/use-cases/profiles/GetRestaurantOwnPhoneUseCase';
 import { DeleteRestaurantProfileUseCase } from '../application/use-cases/profiles/DeleteRestaurantProfileUseCase';
 import { CreateCandidateProfileUseCase } from '../application/use-cases/profiles/CreateCandidateProfileUseCase';
 import { UpdateCandidateProfileUseCase } from '../application/use-cases/profiles/UpdateCandidateProfileUseCase';
 import { GetCandidateProfileUseCase } from '../application/use-cases/profiles/GetCandidateProfileUseCase';
+import { GetCandidateOwnCpfUseCase } from '../application/use-cases/profiles/GetCandidateOwnCpfUseCase';
+import { GetCandidateOwnPhoneUseCase } from '../application/use-cases/profiles/GetCandidateOwnPhoneUseCase';
 import { DeleteCandidateProfileUseCase } from '../application/use-cases/profiles/DeleteCandidateProfileUseCase';
 import { ListPositionsUseCase } from '../application/use-cases/profiles/ListPositionsUseCase';
 import { GrantCandidateBadgeUseCase } from '../application/use-cases/profiles/GrantCandidateBadgeUseCase';
@@ -196,6 +200,20 @@ container.register(GetRestaurantProfileUseCase, {
     ),
 });
 
+container.register(GetRestaurantOwnCpfCnpjUseCase, {
+  useFactory: (c) =>
+    new GetRestaurantOwnCpfCnpjUseCase(
+      c.resolve<RestaurantRepository>(TOKENS.RestaurantRepository),
+    ),
+});
+
+container.register(GetRestaurantOwnPhoneUseCase, {
+  useFactory: (c) =>
+    new GetRestaurantOwnPhoneUseCase(
+      c.resolve<RestaurantRepository>(TOKENS.RestaurantRepository),
+    ),
+});
+
 container.register(DeleteRestaurantProfileUseCase, {
   useFactory: (c) =>
     new DeleteRestaurantProfileUseCase(
@@ -222,6 +240,20 @@ container.register(UpdateCandidateProfileUseCase, {
 container.register(GetCandidateProfileUseCase, {
   useFactory: (c) =>
     new GetCandidateProfileUseCase(
+      c.resolve<CandidateRepository>(TOKENS.CandidateRepository),
+    ),
+});
+
+container.register(GetCandidateOwnCpfUseCase, {
+  useFactory: (c) =>
+    new GetCandidateOwnCpfUseCase(
+      c.resolve<CandidateRepository>(TOKENS.CandidateRepository),
+    ),
+});
+
+container.register(GetCandidateOwnPhoneUseCase, {
+  useFactory: (c) =>
+    new GetCandidateOwnPhoneUseCase(
       c.resolve<CandidateRepository>(TOKENS.CandidateRepository),
     ),
 });
@@ -428,6 +460,8 @@ container.register(RestaurantController, {
       c.resolve(CreateRestaurantProfileUseCase),
       c.resolve(UpdateRestaurantProfileUseCase),
       c.resolve(GetRestaurantProfileUseCase),
+      c.resolve(GetRestaurantOwnCpfCnpjUseCase),
+      c.resolve(GetRestaurantOwnPhoneUseCase),
       c.resolve(DeleteRestaurantProfileUseCase),
     ),
 });
@@ -438,6 +472,8 @@ container.register(CandidateController, {
       c.resolve(CreateCandidateProfileUseCase),
       c.resolve(UpdateCandidateProfileUseCase),
       c.resolve(GetCandidateProfileUseCase),
+      c.resolve(GetCandidateOwnCpfUseCase),
+      c.resolve(GetCandidateOwnPhoneUseCase),
       c.resolve(DeleteCandidateProfileUseCase),
       c.resolve(GrantCandidateBadgeUseCase),
       c.resolve(RevokeCandidateBadgeUseCase),

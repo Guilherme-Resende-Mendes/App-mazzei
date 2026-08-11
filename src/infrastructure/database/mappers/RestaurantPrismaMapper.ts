@@ -11,6 +11,7 @@ export class RestaurantPrismaMapper {
       address: row.address,
       phone: row.phone,
       requirementLevel: row.requirementLevel,
+      bio: row.bio,
       active: row.active,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

@@ -59,7 +59,7 @@ export class ApplyForJobUseCase {
 
     if (existing) {
       if (existing.status === HiringStatus.CANCELADA) {
-        existing.reapply();
+        existing.reapply(input.hourlyRate);
         const updated = await this.hiringRepository.update(existing);
         return HiringMapper.toResponse(updated);
       }
@@ -70,6 +70,7 @@ export class ApplyForJobUseCase {
       jobId: job.id,
       candidateId: candidate.id,
       restaurantId: job.restaurantId,
+      hourlyRate: input.hourlyRate,
     });
 
     const created = await this.hiringRepository.create(hiring);

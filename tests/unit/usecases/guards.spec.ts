@@ -81,7 +81,6 @@ describe('Guardas de not found / forbidden', () => {
       address: 'x',
       phone: '9',
       positionId: position.id,
-      expectedSalary: 100,
     });
 
     await expect(
@@ -211,6 +210,7 @@ describe('Guardas de not found / forbidden', () => {
       jobId: 'j',
       candidateId: 'c',
       restaurantId: 'r',
+      hourlyRate: 100,
       agreedPrice: null,
       status: HiringStatus.CONCLUIDA,
       requestedAt: new Date(),

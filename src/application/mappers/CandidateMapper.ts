@@ -8,11 +8,8 @@ export class CandidateMapper {
       id: candidate.id,
       userId: candidate.userId,
       name: candidate.name,
-      document: candidate.document,
       address: candidate.address,
-      phone: candidate.phone,
       positionId: candidate.positionId,
-      expectedSalary: candidate.expectedSalary,
       overallRating: candidate.overallRating,
       bio: candidate.bio,
       badges: candidate.badges.map((badge) => ({

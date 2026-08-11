@@ -2,6 +2,10 @@ import { Position } from '../../../src/domain/entities/Position';
 import { Area } from '../../../src/domain/enums/Area';
 import { Badge } from '../../../src/domain/enums/Badge';
 import { CreateRestaurantProfileUseCase } from '../../../src/application/use-cases/profiles/CreateRestaurantProfileUseCase';
+import { GetRestaurantOwnCpfCnpjUseCase } from '../../../src/application/use-cases/profiles/GetRestaurantOwnCpfCnpjUseCase';
+import { GetRestaurantOwnPhoneUseCase } from '../../../src/application/use-cases/profiles/GetRestaurantOwnPhoneUseCase';
+import { GetCandidateOwnCpfUseCase } from '../../../src/application/use-cases/profiles/GetCandidateOwnCpfUseCase';
+import { GetCandidateOwnPhoneUseCase } from '../../../src/application/use-cases/profiles/GetCandidateOwnPhoneUseCase';
 import { CreateCandidateProfileUseCase } from '../../../src/application/use-cases/profiles/CreateCandidateProfileUseCase';
 import { GrantCandidateBadgeUseCase } from '../../../src/application/use-cases/profiles/GrantCandidateBadgeUseCase';
 import { RevokeCandidateBadgeUseCase } from '../../../src/application/use-cases/profiles/RevokeCandidateBadgeUseCase';
@@ -58,6 +62,44 @@ describe('Profiles use cases', () => {
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
+  it('retorna cpf/cnpj e telefone apenas do usuario autenticado', async () => {
+    const repo = new InMemoryRestaurantRepository();
+    await new CreateRestaurantProfileUseCase(repo).execute({
+      userId: 'u1',
+      name: 'R1',
+      cpfCnpj: '12345678000199',
+      address: 'rua',
+      phone: '11999999999',
+    });
+
+    const cpfCnpj = await new GetRestaurantOwnCpfCnpjUseCase(repo).execute('u1');
+    expect(cpfCnpj.cpfCnpj).toBe('12345678000199');
+
+    const phone = await new GetRestaurantOwnPhoneUseCase(repo).execute('u1');
+    expect(phone.phone).toBe('11999999999');
+  });
+
+  it('retorna cpf e telefone apenas do candidato autenticado', async () => {
+    const candidates = new InMemoryCandidateRepository();
+    const positions = new InMemoryPositionRepository([position]);
+    await new CreateCandidateProfileUseCase(candidates, positions).execute({
+      userId: 'u1',
+      name: 'C',
+      document: '12345678901',
+      address: 'rua',
+      phone: '11988888888',
+      positionId: position.id,
+    });
+
+    const cpf = await new GetCandidateOwnCpfUseCase(candidates).execute('u1');
+    expect(cpf.cpf).toBe('12345678901');
+
+    const phone = await new GetCandidateOwnPhoneUseCase(candidates).execute(
+      'u1',
+    );
+    expect(phone.phone).toBe('11988888888');
+  });
+
   it('rejeita candidato com cargo inativo', async () => {
     const candidates = new InMemoryCandidateRepository();
     const positions = new InMemoryPositionRepository([position]);
@@ -71,7 +113,6 @@ describe('Profiles use cases', () => {
         address: 'rua',
         phone: '11999999999',
         positionId: 'inexistente',
-        expectedSalary: 100,
       }),
     ).rejects.toBeInstanceOf(UnprocessableEntityError);
   });
@@ -86,7 +127,6 @@ describe('Profiles use cases', () => {
       address: 'rua',
       phone: '11999999999',
       positionId: position.id,
-      expectedSalary: 100,
     });
     const candidateId = candidates.items[0].id;
 

@@ -8,6 +8,7 @@ export interface CreateRestaurantProfileInput {
   address: string;
   phone: string;
   requirementLevel?: number | null;
+  bio?: string | null;
 }
 
 export interface UpdateRestaurantProfileInput {
@@ -16,19 +17,35 @@ export interface UpdateRestaurantProfileInput {
   address?: string;
   phone?: string;
   requirementLevel?: number | null;
+  bio?: string | null;
 }
 
 export interface RestaurantResponseDTO {
   id: string;
   userId: string;
   name: string;
-  cpfCnpj: string;
   address: string;
-  phone: string;
   requirementLevel: number | null;
+  bio: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RestaurantCpfCnpjResponseDTO {
+  cpfCnpj: string;
+}
+
+export interface RestaurantPhoneResponseDTO {
+  phone: string;
+}
+
+export interface CandidateCpfResponseDTO {
+  cpf: string;
+}
+
+export interface CandidatePhoneResponseDTO {
+  phone: string;
 }
 
 export interface CreateCandidateProfileInput {
@@ -38,7 +55,6 @@ export interface CreateCandidateProfileInput {
   address: string;
   phone: string;
   positionId: string;
-  expectedSalary: number;
   bio?: string | null;
 }
 
@@ -48,7 +64,6 @@ export interface UpdateCandidateProfileInput {
   address?: string;
   phone?: string;
   positionId?: string;
-  expectedSalary?: number;
   bio?: string | null;
 }
 
@@ -61,11 +76,8 @@ export interface CandidateResponseDTO {
   id: string;
   userId: string;
   name: string;
-  document: string;
   address: string;
-  phone: string;
   positionId: string;
-  expectedSalary: number;
   overallRating: number;
   bio: string | null;
   badges: CandidateBadgeDTO[];

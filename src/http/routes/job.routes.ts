@@ -14,6 +14,7 @@ import {
   rescheduleJobBodySchema,
   updateJobBodySchema,
 } from '../validators/job.validators';
+import { applyForJobBodySchema } from '../validators/application.validators';
 
 const jobRoutes = Router();
 
@@ -80,8 +81,11 @@ jobRoutes.post(
   (req, res) => jobController().reschedule(req, res),
 );
 
-jobRoutes.post('/:id/applications', ensureRole(Role.CLIENT), (req, res) =>
-  applicationController().apply(req, res),
+jobRoutes.post(
+  '/:id/applications',
+  ensureRole(Role.CLIENT),
+  validateBody(applyForJobBodySchema),
+  (req, res) => applicationController().apply(req, res),
 );
 
 jobRoutes.get('/:id/applications', ensureRole(Role.OWNER), (req, res) =>

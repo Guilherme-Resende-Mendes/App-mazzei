@@ -42,7 +42,6 @@ export class UpdateCandidateProfileUseCase {
       address: input.address,
       phone: input.phone,
       positionId: input.positionId,
-      expectedSalary: input.expectedSalary,
       bio: input.bio,
     });
 
