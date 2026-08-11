@@ -91,6 +91,27 @@ describe('Modules routes (integration)', () => {
       sub: 'admin-1',
       role: Role.ADMIN,
     });
+
+    await request(app)
+      .post('/api/restaurants')
+      .set('Authorization', owner())
+      .send({
+        name: 'Cantina Setup',
+        cpfCnpj: '12345678000199',
+        address: 'Rua A, 100',
+        phone: '11999999999',
+      });
+
+    await request(app)
+      .post('/api/candidates')
+      .set('Authorization', client())
+      .send({
+        name: 'Freelancer Setup',
+        document: '12345678901',
+        address: 'Rua B, 200',
+        phone: '11988888888',
+        positionId: POSITION_ID,
+      });
   });
 
   const owner = (): string => `Bearer ${ownerToken}`;
@@ -128,35 +149,17 @@ describe('Modules routes (integration)', () => {
 
     const apply = await request(app)
       .post(`/api/jobs/${created.body.data.id}/applications`)
-      .set('Authorization', client());
+      .set('Authorization', client())
+      .send({ hourlyRate: 150 });
 
     expect(apply.status).toBe(409);
   });
 
   it('executa o fluxo completo de ponta a ponta', async () => {
-    const restaurant = await request(app)
-      .post('/api/restaurants')
-      .set('Authorization', owner())
-      .send({
-        name: 'Cantina',
-        cpfCnpj: '12345678000199',
-        address: 'Rua A, 100',
-        phone: '11999999999',
-      });
-    expect(restaurant.status).toBe(201);
-
     const candidate = await request(app)
-      .post('/api/candidates')
-      .set('Authorization', client())
-      .send({
-        name: 'Freelancer',
-        document: '12345678901',
-        address: 'Rua B, 200',
-        phone: '11988888888',
-        positionId: POSITION_ID,
-        expectedSalary: 150,
-      });
-    expect(candidate.status).toBe(201);
+      .get('/api/candidates/me')
+      .set('Authorization', client());
+    expect(candidate.status).toBe(200);
     candidateId = candidate.body.data.id;
 
     const job = await request(app)
@@ -175,17 +178,19 @@ describe('Modules routes (integration)', () => {
       .get('/api/jobs')
       .set('Authorization', client());
     expect(open.status).toBe(200);
-    expect(open.body.data.total).toBe(1);
+    expect(open.body.data.total).toBeGreaterThanOrEqual(1);
 
     const apply = await request(app)
       .post(`/api/jobs/${jobId}/applications`)
-      .set('Authorization', client());
+      .set('Authorization', client())
+      .send({ hourlyRate: 150 });
     expect(apply.status).toBe(201);
     const hiringId = apply.body.data.id as string;
 
     const applyAgain = await request(app)
       .post(`/api/jobs/${jobId}/applications`)
-      .set('Authorization', client());
+      .set('Authorization', client())
+      .send({ hourlyRate: 150 });
     expect(applyAgain.status).toBe(409);
 
     const listApps = await request(app)
@@ -228,25 +233,72 @@ describe('Modules routes (integration)', () => {
       .get('/api/restaurants/me')
       .set('Authorization', owner());
     expect(restaurantMe.status).toBe(200);
+    expect(restaurantMe.body.data.cpfCnpj).toBeUndefined();
+    expect(restaurantMe.body.data.phone).toBeUndefined();
+
+    const restaurantCpfCnpj = await request(app)
+      .get('/api/restaurants/me/cpf-cnpj')
+      .set('Authorization', owner());
+    expect(restaurantCpfCnpj.status).toBe(200);
+    expect(restaurantCpfCnpj.body.data.cpfCnpj).toBe('12345678000199');
+
+    const restaurantPhone = await request(app)
+      .get('/api/restaurants/me/phone')
+      .set('Authorization', owner());
+    expect(restaurantPhone.status).toBe(200);
+    expect(restaurantPhone.body.data.phone).toBe('11999999999');
 
     const restaurantUpdate = await request(app)
       .put('/api/restaurants/me')
       .set('Authorization', owner())
-      .send({ name: 'Cantina Nova', requirementLevel: 3 });
+      .send({
+        name: 'Cantina Nova',
+        requirementLevel: 3,
+        bio: 'Especialidade em eventos corporativos',
+      });
     expect(restaurantUpdate.status).toBe(200);
     expect(restaurantUpdate.body.data.name).toBe('Cantina Nova');
+    expect(restaurantUpdate.body.data.bio).toBe(
+      'Especialidade em eventos corporativos',
+    );
 
     const candidateUpdate = await request(app)
       .put('/api/candidates/me')
       .set('Authorization', client())
-      .send({ expectedSalary: 180 });
+      .send({ name: 'Freelancer Atualizado', bio: 'Experiencia em eventos' });
     expect(candidateUpdate.status).toBe(200);
-    expect(candidateUpdate.body.data.expectedSalary).toBe(180);
+    expect(candidateUpdate.body.data.name).toBe('Freelancer Atualizado');
+    expect(candidateUpdate.body.data.bio).toBe('Experiencia em eventos');
+
+    const candidateMe = await request(app)
+      .get('/api/candidates/me')
+      .set('Authorization', client());
+    expect(candidateMe.body.data.document).toBeUndefined();
+    expect(candidateMe.body.data.phone).toBeUndefined();
+
+    const candidateCpf = await request(app)
+      .get('/api/candidates/me/cpf')
+      .set('Authorization', client());
+    expect(candidateCpf.status).toBe(200);
+    expect(candidateCpf.body.data.cpf).toBe('12345678901');
+
+    const candidatePhone = await request(app)
+      .get('/api/candidates/me/phone')
+      .set('Authorization', client());
+    expect(candidatePhone.status).toBe(200);
+    expect(candidatePhone.body.data.phone).toBe('11988888888');
 
     const candidateById = await request(app)
       .get(`/api/candidates/${candidateId}`)
       .set('Authorization', owner());
     expect(candidateById.status).toBe(200);
+    expect(candidateById.body.data.document).toBeUndefined();
+    expect(candidateById.body.data.phone).toBeUndefined();
+
+    const ownerGetsClientCpf = await request(app)
+      .get('/api/candidates/me/cpf')
+      .set('Authorization', owner());
+    expect(ownerGetsClientCpf.status).toBe(403);
 
     const positions = await request(app)
       .get('/api/positions')
@@ -316,7 +368,8 @@ describe('Modules routes (integration)', () => {
 
     const apply = await request(app)
       .post(`/api/jobs/${jobId}/applications`)
-      .set('Authorization', client());
+      .set('Authorization', client())
+      .send({ hourlyRate: 150 });
     expect(apply.status).toBe(201);
     const hiringId = apply.body.data.id as string;
 
@@ -335,7 +388,8 @@ describe('Modules routes (integration)', () => {
     const jobId2 = await createJob(1);
     const apply2 = await request(app)
       .post(`/api/jobs/${jobId2}/applications`)
-      .set('Authorization', client());
+      .set('Authorization', client())
+      .send({ hourlyRate: 150 });
     const hiringId2 = apply2.body.data.id as string;
 
     const cancel = await request(app)
@@ -346,10 +400,12 @@ describe('Modules routes (integration)', () => {
 
     const reapply = await request(app)
       .post(`/api/jobs/${jobId2}/applications`)
-      .set('Authorization', client());
+      .set('Authorization', client())
+      .send({ hourlyRate: 180 });
     expect(reapply.status).toBe(201);
     expect(reapply.body.data.id).toBe(hiringId2);
     expect(reapply.body.data.status).toBe('SOLICITADA');
+    expect(reapply.body.data.hourlyRate).toBe('180.00');
   });
 
   it('concede e revoga selos (ADMIN)', async () => {
@@ -374,6 +430,17 @@ describe('Modules routes (integration)', () => {
   });
 
   it('aplica RBAC: cliente nao cria vaga (403) e owner nao se candidata (403)', async () => {
+    const candidateId = (
+      await request(app)
+        .get('/api/candidates/me')
+        .set('Authorization', client())
+    ).body.data.id as string;
+
+    const clientGetsCandidateById = await request(app)
+      .get(`/api/candidates/${candidateId}`)
+      .set('Authorization', client());
+    expect(clientGetsCandidateById.status).toBe(403);
+
     const clientCreatesJob = await request(app)
       .post('/api/jobs')
       .set('Authorization', client())
@@ -388,7 +455,8 @@ describe('Modules routes (integration)', () => {
     const jobId = await createJob(1);
     const ownerApplies = await request(app)
       .post(`/api/jobs/${jobId}/applications`)
-      .set('Authorization', owner());
+      .set('Authorization', owner())
+      .send({ hourlyRate: 150 });
     expect(ownerApplies.status).toBe(403);
   });
 

@@ -38,6 +38,7 @@ export class CreateRestaurantProfileUseCase {
       address: input.address,
       phone: input.phone,
       requirementLevel: input.requirementLevel ?? null,
+      bio: input.bio ?? null,
     });
 
     const created = await this.restaurantRepository.create(restaurant);

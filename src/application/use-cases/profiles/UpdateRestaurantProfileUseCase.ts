@@ -25,6 +25,7 @@ export class UpdateRestaurantProfileUseCase {
       address: input.address,
       phone: input.phone,
       requirementLevel: input.requirementLevel,
+      bio: input.bio,
     });
 
     const updated = await this.restaurantRepository.update(restaurant);

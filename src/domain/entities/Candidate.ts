@@ -14,7 +14,6 @@ export interface CandidateProps {
   address: string;
   phone: string;
   positionId: string;
-  expectedSalary: number;
   overallRating: number;
   bio: string | null;
   badges: CandidateBadgeProps[];
@@ -32,7 +31,6 @@ export interface CreateCandidateProps {
   address: string;
   phone: string;
   positionId: string;
-  expectedSalary: number;
   bio?: string | null;
 }
 
@@ -41,7 +39,6 @@ export interface UpdateCandidateProps {
   address?: string;
   phone?: string;
   positionId?: string;
-  expectedSalary?: number;
   bio?: string | null;
 }
 
@@ -64,7 +61,6 @@ export class Candidate {
       address: props.address,
       phone: props.phone,
       positionId: props.positionId,
-      expectedSalary: props.expectedSalary,
       overallRating: 0,
       bio: props.bio ?? null,
       badges: [],
@@ -107,10 +103,6 @@ export class Candidate {
     return this.props.positionId;
   }
 
-  get expectedSalary(): number {
-    return this.props.expectedSalary;
-  }
-
   get overallRating(): number {
     return this.props.overallRating;
   }
@@ -145,9 +137,6 @@ export class Candidate {
     if (changes.phone !== undefined) this.props.phone = changes.phone;
     if (changes.positionId !== undefined) {
       this.props.positionId = changes.positionId;
-    }
-    if (changes.expectedSalary !== undefined) {
-      this.props.expectedSalary = changes.expectedSalary;
     }
     if (changes.bio !== undefined) this.props.bio = changes.bio;
     this.props.updatedAt = now;

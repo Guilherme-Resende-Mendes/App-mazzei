@@ -25,6 +25,14 @@ restaurantRoutes.post(
 
 restaurantRoutes.get('/me', (req, res) => controller().me(req, res));
 
+restaurantRoutes.get('/me/cpf-cnpj', (req, res) =>
+  controller().myCpfCnpj(req, res),
+);
+
+restaurantRoutes.get('/me/phone', (req, res) =>
+  controller().myPhone(req, res),
+);
+
 restaurantRoutes.put(
   '/me',
   validateBody(updateRestaurantBodySchema),

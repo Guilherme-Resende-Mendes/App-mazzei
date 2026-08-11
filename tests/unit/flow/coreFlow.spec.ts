@@ -65,7 +65,6 @@ async function seedProfiles(
     address: 'rua',
     phone: '11999999999',
     positionId: position.id,
-    expectedSalary: 100,
   });
 }
 
@@ -94,7 +93,7 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       deps.candidates,
       deps.jobs,
       deps.hirings,
-    ).execute({ userId: 'client1', jobId: job.id });
+    ).execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 });
 
     const accepted = await new AcceptCandidateUseCase(
       deps.restaurants,
@@ -140,9 +139,9 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       deps.hirings,
     );
 
-    await apply.execute({ userId: 'client1', jobId: job.id });
+    await apply.execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 });
     await expect(
-      apply.execute({ userId: 'client1', jobId: job.id }),
+      apply.execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 }),
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
@@ -159,7 +158,6 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       address: 'rua',
       phone: '11999999999',
       positionId: position.id,
-      expectedSalary: 120,
     });
 
     const job = await createJob(deps, 1);
@@ -169,7 +167,7 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       deps.hirings,
     );
 
-    const hiring = await apply.execute({ userId: 'client1', jobId: job.id });
+    const hiring = await apply.execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 });
     await new AcceptCandidateUseCase(
       deps.restaurants,
       deps.hirings,
@@ -177,7 +175,7 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
     ).execute({ userId: 'owner1', hiringId: hiring.id, agreedPrice: 100 });
 
     await expect(
-      apply.execute({ userId: 'client2', jobId: job.id }),
+      apply.execute({ userId: 'client2', jobId: job.id, hourlyRate: 100 }),
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
@@ -194,7 +192,6 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       address: 'rua',
       phone: '11999999999',
       positionId: position.id,
-      expectedSalary: 120,
     });
 
     const job = await createJob(deps, 1);
@@ -209,10 +206,10 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       deps.uow,
     );
 
-    const h1 = await apply.execute({ userId: 'client1', jobId: job.id });
+    const h1 = await apply.execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 });
     // segunda candidatura antes do preenchimento
     const jobTwo = await createJob(deps, 1);
-    const h2 = await apply.execute({ userId: 'client2', jobId: jobTwo.id });
+    const h2 = await apply.execute({ userId: 'client2', jobId: jobTwo.id, hourlyRate: 120 });
 
     await accept.execute({ userId: 'owner1', hiringId: h1.id, agreedPrice: 100 });
     // tenta aceitar h2 numa vaga diferente e depois forcar excesso na primeira
@@ -220,7 +217,7 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
 
     // nova candidatura na primeira vaga ja preenchida deve falhar no apply
     await expect(
-      apply.execute({ userId: 'client2', jobId: job.id }),
+      apply.execute({ userId: 'client2', jobId: job.id, hourlyRate: 100 }),
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
@@ -241,7 +238,7 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       deps.candidates,
       deps.jobs,
       deps.hirings,
-    ).execute({ userId: 'client1', jobId: job.id });
+    ).execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 });
 
     const cancelJob = new CancelJobUseCase(
       deps.restaurants,
@@ -268,7 +265,7 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       deps.candidates,
       deps.jobs,
       deps.hirings,
-    ).execute({ userId: 'client1', jobId: job.id });
+    ).execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 });
 
     await new AcceptCandidateUseCase(
       deps.restaurants,
@@ -299,10 +296,10 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       deps.hirings,
     );
 
-    const first = await apply.execute({ userId: 'client1', jobId: job.id });
+    const first = await apply.execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 });
     await cancel.execute({ userId: 'client1', hiringId: first.id });
 
-    const second = await apply.execute({ userId: 'client1', jobId: job.id });
+    const second = await apply.execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 });
     expect(second.id).toBe(first.id);
     expect(second.status).toBe('SOLICITADA');
     expect(second.respondedAt).toBeNull();
@@ -323,14 +320,14 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
       deps.hirings,
     );
 
-    const hiring = await apply.execute({ userId: 'client1', jobId: job.id });
+    const hiring = await apply.execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 });
     await new RejectCandidateUseCase(
       deps.restaurants,
       deps.hirings,
     ).execute({ userId: 'owner1', hiringId: hiring.id });
 
     await expect(
-      apply.execute({ userId: 'client1', jobId: job.id }),
+      apply.execute({ userId: 'client1', jobId: job.id, hourlyRate: 100 }),
     ).rejects.toBeInstanceOf(ConflictError);
   });
 });

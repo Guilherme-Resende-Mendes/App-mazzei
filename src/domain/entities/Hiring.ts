@@ -8,6 +8,7 @@ export interface HiringProps {
   jobId: string;
   candidateId: string;
   restaurantId: string;
+  hourlyRate: number;
   agreedPrice: number | null;
   status: HiringStatus;
   requestedAt: Date;
@@ -24,6 +25,7 @@ export interface CreateHiringProps {
   jobId: string;
   candidateId: string;
   restaurantId: string;
+  hourlyRate: number;
   agreedPrice?: number | null;
 }
 
@@ -39,6 +41,7 @@ export class Hiring {
       jobId: props.jobId,
       candidateId: props.candidateId,
       restaurantId: props.restaurantId,
+      hourlyRate: roundMoney(props.hourlyRate),
       agreedPrice: props.agreedPrice ?? null,
       status: HiringStatus.SOLICITADA,
       requestedAt: now,
@@ -69,6 +72,10 @@ export class Hiring {
 
   get restaurantId(): string {
     return this.props.restaurantId;
+  }
+
+  get hourlyRate(): number {
+    return this.props.hourlyRate;
   }
 
   get agreedPrice(): number | null {
@@ -176,7 +183,7 @@ export class Hiring {
     this.props.updatedAt = now;
   }
 
-  reapply(now: Date = new Date()): void {
+  reapply(hourlyRate: number, now: Date = new Date()): void {
     if (this.props.status !== HiringStatus.CANCELADA) {
       throw new InvalidStatusTransitionError(
         'Hiring',
@@ -185,6 +192,7 @@ export class Hiring {
       );
     }
     this.props.status = HiringStatus.SOLICITADA;
+    this.props.hourlyRate = roundMoney(hourlyRate);
     this.props.requestedAt = now;
     this.props.respondedAt = null;
     this.props.updatedAt = now;

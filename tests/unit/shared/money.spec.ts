@@ -33,6 +33,7 @@ describe('HiringMapper agreedPrice', () => {
       jobId: 'job',
       candidateId: 'cand',
       restaurantId: 'rest',
+      hourlyRate: 100,
     });
     hiring.accept(100.1);
 

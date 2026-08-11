@@ -22,6 +22,7 @@ export class ApplicationController {
     const result = await this.applyForJob.execute({
       userId: getUserId(req),
       jobId: getParam(req, 'id'),
+      hourlyRate: req.body.hourlyRate,
     });
 
     return sendSuccess(res, result, 201);

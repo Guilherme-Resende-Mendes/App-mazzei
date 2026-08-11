@@ -7,6 +7,7 @@ function concludedHiring(delivery: number, punctuality: number): Hiring {
     jobId: 'job',
     candidateId: 'cand',
     restaurantId: 'rest',
+    hourlyRate: 100,
   });
   hiring.accept(null);
   hiring.conclude(Rating.create(delivery), Rating.create(punctuality));
@@ -29,6 +30,7 @@ describe('CandidateRatingService', () => {
       jobId: 'job',
       candidateId: 'cand',
       restaurantId: 'rest',
+      hourlyRate: 100,
     });
     faulty.accept(null);
     faulty.cancel();

@@ -4,7 +4,7 @@ import { HiringRepository } from '../../../domain/repositories/HiringRepository'
 import { PrismaClientOrTx } from '../prisma/client';
 import { HiringPrismaMapper } from '../mappers/HiringPrismaMapper';
 import { HiringStatusMapper } from '../mappers/HiringStatusMapper';
-import { nullableNumberToDecimalMoney } from '../mappers/prismaFieldHelpers';
+import { nullableNumberToDecimalMoney, numberToDecimalMoney } from '../mappers/prismaFieldHelpers';
 
 export class PrismaHiringRepository implements HiringRepository {
   constructor(private readonly prisma: PrismaClientOrTx) {}
@@ -16,6 +16,7 @@ export class PrismaHiringRepository implements HiringRepository {
         jobId: hiring.jobId,
         candidateId: hiring.candidateId,
         restaurantId: hiring.restaurantId,
+        hourlyRate: numberToDecimalMoney(hiring.hourlyRate),
         agreedPrice: nullableNumberToDecimalMoney(hiring.agreedPrice),
         status: HiringStatusMapper.toPrisma(hiring.status),
         requestedAt: hiring.requestedAt,
@@ -30,6 +31,7 @@ export class PrismaHiringRepository implements HiringRepository {
     const row = await this.prisma.hiring.update({
       where: { id: hiring.id },
       data: {
+        hourlyRate: numberToDecimalMoney(hiring.hourlyRate),
         agreedPrice: nullableNumberToDecimalMoney(hiring.agreedPrice),
         status: HiringStatusMapper.toPrisma(hiring.status),
         requestedAt: hiring.requestedAt,

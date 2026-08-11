@@ -33,6 +33,14 @@ candidateRoutes.get('/me/reviews', ensureRole(Role.CLIENT), (req, res) =>
   controller().reviews(req, res),
 );
 
+candidateRoutes.get('/me/cpf', ensureRole(Role.CLIENT), (req, res) =>
+  controller().myCpf(req, res),
+);
+
+candidateRoutes.get('/me/phone', ensureRole(Role.CLIENT), (req, res) =>
+  controller().myPhone(req, res),
+);
+
 candidateRoutes.put(
   '/me',
   ensureRole(Role.CLIENT),
@@ -44,7 +52,11 @@ candidateRoutes.delete('/me', ensureRole(Role.CLIENT), (req, res) =>
   controller().remove(req, res),
 );
 
-candidateRoutes.get('/:id', (req, res) => controller().getById(req, res));
+candidateRoutes.get(
+  '/:id',
+  ensureRole(Role.OWNER),
+  (req, res) => controller().getById(req, res),
+);
 
 candidateRoutes.post(
   '/:id/badges',

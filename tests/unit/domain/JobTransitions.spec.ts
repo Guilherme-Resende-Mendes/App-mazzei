@@ -56,6 +56,7 @@ describe('Hiring transitions', () => {
       jobId: 'job',
       candidateId: 'cand',
       restaurantId: 'rest',
+      hourlyRate: 50,
     });
   }
 
@@ -95,14 +96,15 @@ describe('Hiring transitions', () => {
     const hiring = newHiring();
     hiring.cancel();
     const reappliedAt = new Date('2030-02-01T00:00:00.000Z');
-    hiring.reapply(reappliedAt);
+    hiring.reapply(75, reappliedAt);
     expect(hiring.status).toBe(HiringStatus.SOLICITADA);
+    expect(hiring.hourlyRate).toBe(75);
     expect(hiring.requestedAt).toEqual(reappliedAt);
     expect(hiring.respondedAt).toBeNull();
   });
 
   it('nao pode reapply sem estar CANCELADA', () => {
     const hiring = newHiring();
-    expect(() => hiring.reapply()).toThrow(InvalidStatusTransitionError);
+    expect(() => hiring.reapply(75)).toThrow(InvalidStatusTransitionError);
   });
 });

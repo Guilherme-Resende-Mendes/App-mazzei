@@ -120,6 +120,7 @@ model Restaurant {
   address          String    @map("endereco")
   phone            String    @map("telefone") @db.VarChar(30)
   requirementLevel Int?      @map("nivel_exigencia")
+  bio              String?   @map("bio")
   active           Boolean   @default(true) @map("ativo")
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -139,9 +140,8 @@ model Candidate {
   document       String    @unique @map("documento") @db.VarChar(30)
   address        String    @map("endereco")
   phone          String    @map("telefone") @db.VarChar(30)
-  positionId     String    @map("cargo_id") @db.Uuid
-  expectedSalary Decimal   @map("pretensao_salarial") @db.Decimal(10, 2)
-  overallRating  Decimal   @default(0) @map("nota_geral") @db.Decimal(3, 2)
+  positionId    String    @map("cargo_id") @db.Uuid
+  overallRating Decimal   @default(0) @map("nota_geral") @db.Decimal(3, 2)
   bio            String?   @map("bio")
   active         Boolean   @default(true) @map("ativo")
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -202,6 +202,7 @@ model Hiring {
   jobId             String       @map("vaga_id") @db.Uuid
   candidateId       String       @map("candidato_id") @db.Uuid
   restaurantId      String       @map("restaurante_id") @db.Uuid
+  hourlyRate        Decimal      @map("valor_hora") @db.Decimal(10, 2)
   agreedPrice       Decimal?     @map("preco_acordado") @db.Decimal(10, 2)
   status            HiringStatus @default(SOLICITADA) @map("status")
   requestedAt       DateTime     @map("solicitado_em") @db.Timestamptz(6)

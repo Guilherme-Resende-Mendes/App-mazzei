@@ -20,7 +20,6 @@ export class CandidatePrismaMapper {
       address: row.address,
       phone: row.phone,
       positionId: row.positionId,
-      expectedSalary: decimalToNumber(row.expectedSalary),
       overallRating: decimalToNumber(row.overallRating),
       bio: row.bio,
       badges: (row.badges ?? []).map((badge) => ({

@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import { Badge } from '../../domain/enums/Badge';
 import { CreateCandidateProfileUseCase } from '../../application/use-cases/profiles/CreateCandidateProfileUseCase';
 import { DeleteCandidateProfileUseCase } from '../../application/use-cases/profiles/DeleteCandidateProfileUseCase';
+import { GetCandidateOwnCpfUseCase } from '../../application/use-cases/profiles/GetCandidateOwnCpfUseCase';
+import { GetCandidateOwnPhoneUseCase } from '../../application/use-cases/profiles/GetCandidateOwnPhoneUseCase';
 import { GetCandidateProfileUseCase } from '../../application/use-cases/profiles/GetCandidateProfileUseCase';
 import { GrantCandidateBadgeUseCase } from '../../application/use-cases/profiles/GrantCandidateBadgeUseCase';
 import { RevokeCandidateBadgeUseCase } from '../../application/use-cases/profiles/RevokeCandidateBadgeUseCase';
@@ -15,6 +17,8 @@ export class CandidateController {
     private readonly createProfile: CreateCandidateProfileUseCase,
     private readonly updateProfile: UpdateCandidateProfileUseCase,
     private readonly getProfile: GetCandidateProfileUseCase,
+    private readonly getOwnCpf: GetCandidateOwnCpfUseCase,
+    private readonly getOwnPhone: GetCandidateOwnPhoneUseCase,
     private readonly deleteProfile: DeleteCandidateProfileUseCase,
     private readonly grantBadge: GrantCandidateBadgeUseCase,
     private readonly revokeBadge: RevokeCandidateBadgeUseCase,
@@ -29,7 +33,6 @@ export class CandidateController {
       address: req.body.address,
       phone: req.body.phone,
       positionId: req.body.positionId,
-      expectedSalary: req.body.expectedSalary,
       bio: req.body.bio ?? null,
     });
 
@@ -43,7 +46,6 @@ export class CandidateController {
       address: req.body.address,
       phone: req.body.phone,
       positionId: req.body.positionId,
-      expectedSalary: req.body.expectedSalary,
       bio: req.body.bio,
     });
 
@@ -52,6 +54,16 @@ export class CandidateController {
 
   me = async (req: Request, res: Response): Promise<Response> => {
     const result = await this.getProfile.executeByUserId(getUserId(req));
+    return sendSuccess(res, result);
+  };
+
+  myCpf = async (req: Request, res: Response): Promise<Response> => {
+    const result = await this.getOwnCpf.execute(getUserId(req));
+    return sendSuccess(res, result);
+  };
+
+  myPhone = async (req: Request, res: Response): Promise<Response> => {
+    const result = await this.getOwnPhone.execute(getUserId(req));
     return sendSuccess(res, result);
   };
 

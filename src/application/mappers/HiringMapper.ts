@@ -9,6 +9,7 @@ export class HiringMapper {
       jobId: hiring.jobId,
       candidateId: hiring.candidateId,
       restaurantId: hiring.restaurantId,
+      hourlyRate: formatMoney(hiring.hourlyRate),
       agreedPrice:
         hiring.agreedPrice !== null
           ? formatMoney(hiring.agreedPrice)
