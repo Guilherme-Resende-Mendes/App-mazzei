@@ -66,6 +66,7 @@ import { PrismaHiringRepository } from '../infrastructure/database/repositories/
 import { PrismaUnitOfWork } from '../infrastructure/database/PrismaUnitOfWork';
 import { BcryptHashProvider } from '../infrastructure/providers/hash/BcryptHashProvider';
 import { JwtTokenProvider } from '../infrastructure/providers/auth/JwtTokenProvider';
+import { ViaCepLookupProvider } from '../infrastructure/providers/address/ViaCepLookupProvider';
 
 import { AuthController } from '../http/controllers/AuthController';
 import { RestaurantController } from '../http/controllers/RestaurantController';
@@ -179,10 +180,15 @@ container.register(GetProfileUseCase, {
 // ============================================================
 // Use cases - Profiles
 // ============================================================
+container.register(TOKENS.CepLookupProvider, {
+  useFactory: () => new ViaCepLookupProvider(),
+});
+
 container.register(CreateRestaurantProfileUseCase, {
   useFactory: (c) =>
     new CreateRestaurantProfileUseCase(
       c.resolve<RestaurantRepository>(TOKENS.RestaurantRepository),
+      c.resolve(TOKENS.CepLookupProvider),
     ),
 });
 
@@ -190,6 +196,7 @@ container.register(UpdateRestaurantProfileUseCase, {
   useFactory: (c) =>
     new UpdateRestaurantProfileUseCase(
       c.resolve<RestaurantRepository>(TOKENS.RestaurantRepository),
+      c.resolve(TOKENS.CepLookupProvider),
     ),
 });
 
@@ -226,6 +233,7 @@ container.register(CreateCandidateProfileUseCase, {
     new CreateCandidateProfileUseCase(
       c.resolve<CandidateRepository>(TOKENS.CandidateRepository),
       c.resolve<PositionRepository>(TOKENS.PositionRepository),
+      c.resolve(TOKENS.CepLookupProvider),
     ),
 });
 
@@ -234,6 +242,7 @@ container.register(UpdateCandidateProfileUseCase, {
     new UpdateCandidateProfileUseCase(
       c.resolve<CandidateRepository>(TOKENS.CandidateRepository),
       c.resolve<PositionRepository>(TOKENS.PositionRepository),
+      c.resolve(TOKENS.CepLookupProvider),
     ),
 });
 

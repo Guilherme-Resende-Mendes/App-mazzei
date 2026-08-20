@@ -21,6 +21,17 @@ import { InMemoryJobRepository } from '../../support/InMemoryJobRepository';
 import { InMemoryPositionRepository } from '../../support/InMemoryPositionRepository';
 import { InMemoryRestaurantRepository } from '../../support/InMemoryRestaurantRepository';
 import { InMemoryUnitOfWork } from '../../support/InMemoryUnitOfWork';
+import { FakeCepLookupProvider } from '../../support/FakeCepLookupProvider';
+import { validTestAddress } from '../../support/validTestAddress';
+import {
+  VALID_CNPJ,
+  VALID_CNPJ_2,
+  VALID_CPF,
+  VALID_CPF_2,
+  VALID_PHONE,
+} from '../../support/validTestDocuments';
+
+const cepLookup = new FakeCepLookupProvider();
 
 const position = Position.restore({
   id: 'pos-1',
@@ -47,23 +58,24 @@ async function seedProfiles(
   deps: ReturnType<typeof setup>,
   ownerId = 'owner1',
 ) {
-  await new CreateRestaurantProfileUseCase(deps.restaurants).execute({
+  await new CreateRestaurantProfileUseCase(deps.restaurants, cepLookup).execute({
     userId: ownerId,
     name: 'Rest',
-    cpfCnpj: `cnpj-${ownerId}`,
-    address: 'rua',
-    phone: '11999999999',
+    cpfCnpj: VALID_CNPJ,
+    address: validTestAddress(),
+    phone: VALID_PHONE,
   });
 
   await new CreateCandidateProfileUseCase(
     deps.candidates,
     deps.positions,
+    cepLookup,
   ).execute({
     userId: 'client1',
     name: 'Cand',
-    document: 'doc-1',
-    address: 'rua',
-    phone: '11999999999',
+    document: VALID_CPF,
+    address: validTestAddress(),
+    phone: VALID_PHONE,
     positionId: position.id,
   });
 }
@@ -151,11 +163,12 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
     await new CreateCandidateProfileUseCase(
       deps.candidates,
       deps.positions,
+      cepLookup,
     ).execute({
       userId: 'client2',
       name: 'Cand2',
-      document: 'doc-2',
-      address: 'rua',
+      document: VALID_CPF_2,
+      address: validTestAddress(),
       phone: '11999999999',
       positionId: position.id,
     });
@@ -185,11 +198,12 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
     await new CreateCandidateProfileUseCase(
       deps.candidates,
       deps.positions,
+      cepLookup,
     ).execute({
       userId: 'client2',
       name: 'Cand2',
-      document: 'doc-2',
-      address: 'rua',
+      document: VALID_CPF_2,
+      address: validTestAddress(),
       phone: '11999999999',
       positionId: position.id,
     });
@@ -225,11 +239,11 @@ describe('Core flow (perfis -> vaga -> candidatura -> aceite -> conclusao)', () 
     const deps = setup();
     await seedProfiles(deps);
     // segundo restaurante (outro dono)
-    await new CreateRestaurantProfileUseCase(deps.restaurants).execute({
+    await new CreateRestaurantProfileUseCase(deps.restaurants, cepLookup).execute({
       userId: 'owner2',
       name: 'Rest2',
-      cpfCnpj: 'cnpj-owner2',
-      address: 'rua',
+      cpfCnpj: VALID_CNPJ_2,
+      address: validTestAddress(),
       phone: '11999999999',
     });
 

@@ -1,4 +1,8 @@
 export { DomainException } from './DomainException';
+export { InvalidAddressError } from './InvalidAddressError';
+export { InvalidCpfError } from './InvalidCpfError';
+export { InvalidCpfCnpjError } from './InvalidCpfCnpjError';
+export { InvalidPhoneError } from './InvalidPhoneError';
 export { InvalidEmailError } from './InvalidEmailError';
 export { InvalidRatingError } from './InvalidRatingError';
 export { InvalidJobScheduleError } from './InvalidJobScheduleError';

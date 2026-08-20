@@ -14,6 +14,7 @@ export const TOKENS = {
   UnitOfWork: 'UnitOfWork',
   HashProvider: 'HashProvider',
   TokenProvider: 'TokenProvider',
+  CepLookupProvider: 'CepLookupProvider',
 } as const;
 
 export type Token = (typeof TOKENS)[keyof typeof TOKENS];

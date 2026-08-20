@@ -4,6 +4,7 @@ import {
   CandidateBadge as PrismaCandidateBadge,
 } from '../prisma/generated/client';
 import { BadgeMapper } from './BadgeMapper';
+import { AddressPrismaMapper } from './AddressPrismaMapper';
 import { decimalToNumber } from './prismaFieldHelpers';
 
 type CandidateRow = PrismaCandidate & {
@@ -17,7 +18,7 @@ export class CandidatePrismaMapper {
       userId: row.userId,
       name: row.name,
       document: row.document,
-      address: row.address,
+      address: AddressPrismaMapper.toDomain(row.address),
       phone: row.phone,
       positionId: row.positionId,
       overallRating: decimalToNumber(row.overallRating),

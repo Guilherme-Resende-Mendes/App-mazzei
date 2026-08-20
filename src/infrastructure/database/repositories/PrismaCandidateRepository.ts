@@ -4,6 +4,7 @@ import { CandidateRepository } from '../../../domain/repositories/CandidateRepos
 import { PrismaClientOrTx } from '../prisma/client';
 import { BadgeMapper } from '../mappers/BadgeMapper';
 import { CandidatePrismaMapper } from '../mappers/CandidatePrismaMapper';
+import { AddressPrismaMapper } from '../mappers/AddressPrismaMapper';
 
 export class PrismaCandidateRepository implements CandidateRepository {
   constructor(private readonly prisma: PrismaClientOrTx) {}
@@ -15,7 +16,7 @@ export class PrismaCandidateRepository implements CandidateRepository {
         userId: candidate.userId,
         name: candidate.name,
         document: candidate.document,
-        address: candidate.address,
+        address: AddressPrismaMapper.toPersistence(candidate.address),
         phone: candidate.phone,
         positionId: candidate.positionId,
         overallRating: candidate.overallRating,
@@ -32,7 +33,7 @@ export class PrismaCandidateRepository implements CandidateRepository {
       where: { id: candidate.id },
       data: {
         name: candidate.name,
-        address: candidate.address,
+        address: AddressPrismaMapper.toPersistence(candidate.address),
         phone: candidate.phone,
         positionId: candidate.positionId,
         bio: candidate.bio,

@@ -198,6 +198,19 @@ registry.registerPath({
 // Schemas de resposta (Profiles, Jobs, Applications, Reviews)
 // ============================================================
 
+const addressSchema = registry.register(
+  'Address',
+  z
+    .object({
+      rua: z.string(),
+      bairro: z.string(),
+      numero: z.string().nullable(),
+      complemento: z.string().nullable(),
+      cep: z.string(),
+    })
+    .openapi('Address'),
+);
+
 const restaurantResponseSchema = registry.register(
   'Restaurant',
   z
@@ -205,7 +218,7 @@ const restaurantResponseSchema = registry.register(
       id: z.string(),
       userId: z.string(),
       name: z.string(),
-      address: z.string(),
+      address: addressSchema,
       requirementLevel: z.number().nullable(),
       bio: z.string().nullable(),
       active: z.boolean(),
@@ -237,7 +250,7 @@ const candidateResponseSchema = registry.register(
       id: z.string(),
       userId: z.string(),
       name: z.string(),
-      address: z.string(),
+      address: addressSchema,
       positionId: z.string(),
       overallRating: z.number(),
       bio: z.string().nullable(),

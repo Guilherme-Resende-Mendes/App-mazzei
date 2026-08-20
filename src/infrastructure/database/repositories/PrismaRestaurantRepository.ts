@@ -2,6 +2,7 @@ import { Restaurant } from '../../../domain/entities/Restaurant';
 import { RestaurantRepository } from '../../../domain/repositories/RestaurantRepository';
 import { PrismaClientOrTx } from '../prisma/client';
 import { RestaurantPrismaMapper } from '../mappers/RestaurantPrismaMapper';
+import { AddressPrismaMapper } from '../mappers/AddressPrismaMapper';
 
 export class PrismaRestaurantRepository implements RestaurantRepository {
   constructor(private readonly prisma: PrismaClientOrTx) {}
@@ -13,7 +14,7 @@ export class PrismaRestaurantRepository implements RestaurantRepository {
         userId: restaurant.userId,
         name: restaurant.name,
         cpfCnpj: restaurant.cpfCnpj,
-        address: restaurant.address,
+        address: AddressPrismaMapper.toPersistence(restaurant.address),
         phone: restaurant.phone,
         requirementLevel: restaurant.requirementLevel,
         bio: restaurant.bio,
@@ -28,7 +29,7 @@ export class PrismaRestaurantRepository implements RestaurantRepository {
       where: { id: restaurant.id },
       data: {
         name: restaurant.name,
-        address: restaurant.address,
+        address: AddressPrismaMapper.toPersistence(restaurant.address),
         phone: restaurant.phone,
         requirementLevel: restaurant.requirementLevel,
         bio: restaurant.bio,

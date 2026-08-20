@@ -16,6 +16,14 @@ import { InMemoryPositionRepository } from '../support/InMemoryPositionRepositor
 import { InMemoryJobRepository } from '../support/InMemoryJobRepository';
 import { InMemoryHiringRepository } from '../support/InMemoryHiringRepository';
 import { InMemoryUnitOfWork } from '../support/InMemoryUnitOfWork';
+import { FakeCepLookupProvider } from '../support/FakeCepLookupProvider';
+import { validTestAddress } from '../support/validTestAddress';
+import {
+  VALID_CNPJ,
+  VALID_CPF,
+  VALID_PHONE,
+  VALID_PHONE_2,
+} from '../support/validTestDocuments';
 
 const POSITION_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -62,6 +70,10 @@ describe('Modules routes (integration)', () => {
     container.registerInstance(TOKENS.JobRepository, jobs);
     container.registerInstance(TOKENS.HiringRepository, hirings);
     container.registerInstance(TOKENS.UnitOfWork, new InMemoryUnitOfWork(ctx));
+    container.registerInstance(
+      TOKENS.CepLookupProvider,
+      new FakeCepLookupProvider(),
+    );
 
     app = createApp();
 
@@ -97,9 +109,9 @@ describe('Modules routes (integration)', () => {
       .set('Authorization', owner())
       .send({
         name: 'Cantina Setup',
-        cpfCnpj: '12345678000199',
-        address: 'Rua A, 100',
-        phone: '11999999999',
+        cpfCnpj: VALID_CNPJ,
+        address: validTestAddress(),
+        phone: VALID_PHONE,
       });
 
     await request(app)
@@ -107,9 +119,9 @@ describe('Modules routes (integration)', () => {
       .set('Authorization', client())
       .send({
         name: 'Freelancer Setup',
-        document: '12345678901',
-        address: 'Rua B, 200',
-        phone: '11988888888',
+        document: VALID_CPF,
+        address: validTestAddress(),
+        phone: VALID_PHONE_2,
         positionId: POSITION_ID,
       });
   });
@@ -240,13 +252,13 @@ describe('Modules routes (integration)', () => {
       .get('/api/restaurants/me/cpf-cnpj')
       .set('Authorization', owner());
     expect(restaurantCpfCnpj.status).toBe(200);
-    expect(restaurantCpfCnpj.body.data.cpfCnpj).toBe('12345678000199');
+    expect(restaurantCpfCnpj.body.data.cpfCnpj).toBe(VALID_CNPJ);
 
     const restaurantPhone = await request(app)
       .get('/api/restaurants/me/phone')
       .set('Authorization', owner());
     expect(restaurantPhone.status).toBe(200);
-    expect(restaurantPhone.body.data.phone).toBe('11999999999');
+    expect(restaurantPhone.body.data.phone).toBe(VALID_PHONE);
 
     const restaurantUpdate = await request(app)
       .put('/api/restaurants/me')
@@ -280,13 +292,13 @@ describe('Modules routes (integration)', () => {
       .get('/api/candidates/me/cpf')
       .set('Authorization', client());
     expect(candidateCpf.status).toBe(200);
-    expect(candidateCpf.body.data.cpf).toBe('12345678901');
+    expect(candidateCpf.body.data.cpf).toBe(VALID_CPF);
 
     const candidatePhone = await request(app)
       .get('/api/candidates/me/phone')
       .set('Authorization', client());
     expect(candidatePhone.status).toBe(200);
-    expect(candidatePhone.body.data.phone).toBe('11988888888');
+    expect(candidatePhone.body.data.phone).toBe(VALID_PHONE_2);
 
     const candidateById = await request(app)
       .get(`/api/candidates/${candidateId}`)
@@ -483,9 +495,9 @@ describe('Modules routes (integration)', () => {
       .set('Authorization', owner())
       .send({
         name: 'X',
-        cpfCnpj: '12345678000188',
-        address: 'rua',
-        phone: '11999999999',
+        cpfCnpj: VALID_CNPJ,
+        address: validTestAddress(),
+        phone: VALID_PHONE,
         hacker: true,
       });
     expect(res.status).toBe(400);
