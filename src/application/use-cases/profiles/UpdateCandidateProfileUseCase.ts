@@ -1,4 +1,5 @@
 import { CandidateRepository } from '../../../domain/repositories/CandidateRepository';
+import { Phone } from '../../../domain/value-objects/Phone';
 import { PositionRepository } from '../../../domain/repositories/PositionRepository';
 import {
   NotFoundError,
@@ -8,12 +9,16 @@ import {
   CandidateResponseDTO,
   UpdateCandidateProfileInput,
 } from '../../dto/profile.dto';
+import { CepLookupProvider } from '../../interfaces/CepLookupProvider';
+import { AddressMapper } from '../../mappers/AddressMapper';
 import { CandidateMapper } from '../../mappers/CandidateMapper';
+import { validateAddressCep } from '../../services/validateAddressCep';
 
 export class UpdateCandidateProfileUseCase {
   constructor(
     private readonly candidateRepository: CandidateRepository,
     private readonly positionRepository: PositionRepository,
+    private readonly cepLookupProvider: CepLookupProvider,
   ) {}
 
   async execute(
@@ -37,10 +42,20 @@ export class UpdateCandidateProfileUseCase {
       }
     }
 
+    let address = candidate.address;
+
+    if (input.address !== undefined) {
+      address = AddressMapper.toDomain(input.address);
+      await validateAddressCep(address, this.cepLookupProvider);
+    }
+
+    const phone =
+      input.phone !== undefined ? Phone.create(input.phone).value : undefined;
+
     candidate.update({
       name: input.name,
-      address: input.address,
-      phone: input.phone,
+      address,
+      phone,
       positionId: input.positionId,
       bio: input.bio,
     });

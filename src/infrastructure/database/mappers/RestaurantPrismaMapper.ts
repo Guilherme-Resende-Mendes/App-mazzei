@@ -1,5 +1,6 @@
 import { Restaurant } from '../../../domain/entities/Restaurant';
 import { Restaurant as PrismaRestaurant } from '../prisma/generated/client';
+import { AddressPrismaMapper } from './AddressPrismaMapper';
 
 export class RestaurantPrismaMapper {
   static toDomain(row: PrismaRestaurant): Restaurant {
@@ -8,7 +9,7 @@ export class RestaurantPrismaMapper {
       userId: row.userId,
       name: row.name,
       cpfCnpj: row.cpfCnpj,
-      address: row.address,
+      address: AddressPrismaMapper.toDomain(row.address),
       phone: row.phone,
       requirementLevel: row.requirementLevel,
       bio: row.bio,

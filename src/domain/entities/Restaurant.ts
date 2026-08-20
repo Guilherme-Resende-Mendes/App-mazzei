@@ -1,9 +1,11 @@
+import { Address } from '../value-objects/Address';
+
 export interface RestaurantProps {
   id: string;
   userId: string;
   name: string;
   cpfCnpj: string;
-  address: string;
+  address: Address;
   phone: string;
   requirementLevel: number | null;
   bio: string | null;
@@ -18,7 +20,7 @@ export interface CreateRestaurantProps {
   userId: string;
   name: string;
   cpfCnpj: string;
-  address: string;
+  address: Address;
   phone: string;
   requirementLevel?: number | null;
   bio?: string | null;
@@ -26,7 +28,7 @@ export interface CreateRestaurantProps {
 
 export interface UpdateRestaurantProps {
   name?: string;
-  address?: string;
+  address?: Address;
   phone?: string;
   requirementLevel?: number | null;
   bio?: string | null;
@@ -78,7 +80,7 @@ export class Restaurant {
     return this.props.cpfCnpj;
   }
 
-  get address(): string {
+  get address(): Address {
     return this.props.address;
   }
 

@@ -117,7 +117,7 @@ model Restaurant {
   userId           String    @unique @map("usuario_id") @db.Uuid
   name             String    @map("nome") @db.VarChar(255)
   cpfCnpj          String    @unique @map("cpf_cnpj") @db.VarChar(20)
-  address          String    @map("endereco")
+  address          Json      @map("endereco")
   phone            String    @map("telefone") @db.VarChar(30)
   requirementLevel Int?      @map("nivel_exigencia")
   bio              String?   @map("bio")
@@ -138,7 +138,7 @@ model Candidate {
   userId         String    @unique @map("usuario_id") @db.Uuid
   name           String    @map("nome") @db.VarChar(255)
   document       String    @unique @map("documento") @db.VarChar(30)
-  address        String    @map("endereco")
+  address        Json      @map("endereco")
   phone          String    @map("telefone") @db.VarChar(30)
   positionId    String    @map("cargo_id") @db.Uuid
   overallRating Decimal   @default(0) @map("nota_geral") @db.Decimal(3, 2)

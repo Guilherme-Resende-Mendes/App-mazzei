@@ -15,9 +15,18 @@ import {
   NotFoundError,
   UnprocessableEntityError,
 } from '../../../src/shared/errors/AppError';
+import { FakeCepLookupProvider } from '../../support/FakeCepLookupProvider';
 import { InMemoryCandidateRepository } from '../../support/InMemoryCandidateRepository';
 import { InMemoryPositionRepository } from '../../support/InMemoryPositionRepository';
 import { InMemoryRestaurantRepository } from '../../support/InMemoryRestaurantRepository';
+import { validTestAddress } from '../../support/validTestAddress';
+import {
+  VALID_CNPJ,
+  VALID_CNPJ_2,
+  VALID_CPF,
+  VALID_PHONE,
+  VALID_PHONE_2,
+} from '../../support/validTestDocuments';
 
 const position = Position.restore({
   id: 'pos-1',
@@ -28,26 +37,28 @@ const position = Position.restore({
   createdAt: new Date(),
 });
 
+const cepLookup = new FakeCepLookupProvider();
+
 describe('Profiles use cases', () => {
   it('bloqueia segundo perfil de restaurante e cpf/cnpj duplicado', async () => {
     const repo = new InMemoryRestaurantRepository();
-    const useCase = new CreateRestaurantProfileUseCase(repo);
+    const useCase = new CreateRestaurantProfileUseCase(repo, cepLookup);
 
     await useCase.execute({
       userId: 'u1',
       name: 'R1',
-      cpfCnpj: '123',
-      address: 'rua',
-      phone: '11999999999',
+      cpfCnpj: VALID_CNPJ,
+      address: validTestAddress(),
+      phone: VALID_PHONE,
     });
 
     await expect(
       useCase.execute({
         userId: 'u1',
         name: 'R1b',
-        cpfCnpj: '999',
-        address: 'rua',
-        phone: '11999999999',
+        cpfCnpj: VALID_CNPJ_2,
+        address: validTestAddress(),
+        phone: VALID_PHONE,
       }),
     ).rejects.toBeInstanceOf(ConflictError);
 
@@ -55,63 +66,71 @@ describe('Profiles use cases', () => {
       useCase.execute({
         userId: 'u2',
         name: 'R2',
-        cpfCnpj: '123',
-        address: 'rua',
-        phone: '11999999999',
+        cpfCnpj: VALID_CNPJ,
+        address: validTestAddress(),
+        phone: VALID_PHONE,
       }),
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('retorna cpf/cnpj e telefone apenas do usuario autenticado', async () => {
     const repo = new InMemoryRestaurantRepository();
-    await new CreateRestaurantProfileUseCase(repo).execute({
+    await new CreateRestaurantProfileUseCase(repo, cepLookup).execute({
       userId: 'u1',
       name: 'R1',
-      cpfCnpj: '12345678000199',
-      address: 'rua',
-      phone: '11999999999',
+      cpfCnpj: VALID_CNPJ,
+      address: validTestAddress(),
+      phone: VALID_PHONE,
     });
 
     const cpfCnpj = await new GetRestaurantOwnCpfCnpjUseCase(repo).execute('u1');
-    expect(cpfCnpj.cpfCnpj).toBe('12345678000199');
+    expect(cpfCnpj.cpfCnpj).toBe(VALID_CNPJ);
 
     const phone = await new GetRestaurantOwnPhoneUseCase(repo).execute('u1');
-    expect(phone.phone).toBe('11999999999');
+    expect(phone.phone).toBe(VALID_PHONE);
   });
 
   it('retorna cpf e telefone apenas do candidato autenticado', async () => {
     const candidates = new InMemoryCandidateRepository();
     const positions = new InMemoryPositionRepository([position]);
-    await new CreateCandidateProfileUseCase(candidates, positions).execute({
+    await new CreateCandidateProfileUseCase(
+      candidates,
+      positions,
+      cepLookup,
+    ).execute({
       userId: 'u1',
       name: 'C',
-      document: '12345678901',
-      address: 'rua',
-      phone: '11988888888',
+      document: VALID_CPF,
+      address: validTestAddress(),
+      phone: VALID_PHONE_2,
       positionId: position.id,
     });
 
     const cpf = await new GetCandidateOwnCpfUseCase(candidates).execute('u1');
-    expect(cpf.cpf).toBe('12345678901');
+    expect(cpf.cpf).toBe(VALID_CPF);
 
     const phone = await new GetCandidateOwnPhoneUseCase(candidates).execute(
       'u1',
     );
-    expect(phone.phone).toBe('11988888888');
+    expect(phone.phone).toBe(VALID_PHONE_2);
   });
 
   it('rejeita candidato com cargo inativo', async () => {
     const candidates = new InMemoryCandidateRepository();
     const positions = new InMemoryPositionRepository([position]);
-    const useCase = new CreateCandidateProfileUseCase(candidates, positions);
+    const useCase = new CreateCandidateProfileUseCase(
+      candidates,
+      positions,
+      cepLookup,
+    );
 
     await expect(
       useCase.execute({
         userId: 'u1',
         name: 'C',
-        document: 'doc',
-        address: 'rua',
-        phone: '11999999999',
+        document: VALID_CPF,
+        address: validTestAddress(),
+        phone: VALID_PHONE,
         positionId: 'inexistente',
       }),
     ).rejects.toBeInstanceOf(UnprocessableEntityError);
@@ -120,12 +139,16 @@ describe('Profiles use cases', () => {
   it('concede e revoga selos (ADMIN), bloqueando duplicidade', async () => {
     const candidates = new InMemoryCandidateRepository();
     const positions = new InMemoryPositionRepository([position]);
-    await new CreateCandidateProfileUseCase(candidates, positions).execute({
+    await new CreateCandidateProfileUseCase(
+      candidates,
+      positions,
+      cepLookup,
+    ).execute({
       userId: 'u1',
       name: 'C',
-      document: 'doc',
-      address: 'rua',
-      phone: '11999999999',
+      document: VALID_CPF,
+      address: validTestAddress(),
+      phone: VALID_PHONE,
       positionId: position.id,
     });
     const candidateId = candidates.items[0].id;

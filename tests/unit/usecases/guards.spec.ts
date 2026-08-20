@@ -27,6 +27,15 @@ import { InMemoryHiringRepository } from '../../support/InMemoryHiringRepository
 import { InMemoryJobRepository } from '../../support/InMemoryJobRepository';
 import { InMemoryPositionRepository } from '../../support/InMemoryPositionRepository';
 import { InMemoryRestaurantRepository } from '../../support/InMemoryRestaurantRepository';
+import { FakeCepLookupProvider } from '../../support/FakeCepLookupProvider';
+import { validTestAddress } from '../../support/validTestAddress';
+import {
+  VALID_CNPJ,
+  VALID_CPF,
+  VALID_PHONE,
+} from '../../support/validTestDocuments';
+
+const cepLookup = new FakeCepLookupProvider();
 
 const position = Position.restore({
   id: 'pos-1',
@@ -58,7 +67,7 @@ describe('Guardas de not found / forbidden', () => {
       new DeleteCandidateProfileUseCase(candidates).execute('x'),
     ).rejects.toBeInstanceOf(NotFoundError);
     await expect(
-      new UpdateRestaurantProfileUseCase(restaurants).execute({
+      new UpdateRestaurantProfileUseCase(restaurants, cepLookup).execute({
         userId: 'x',
         name: 'n',
       }),
@@ -67,6 +76,7 @@ describe('Guardas de not found / forbidden', () => {
       new UpdateCandidateProfileUseCase(
         candidates,
         new InMemoryPositionRepository([position]),
+        cepLookup,
       ).execute({ userId: 'x', name: 'n' }),
     ).rejects.toBeInstanceOf(NotFoundError);
   });
@@ -74,17 +84,21 @@ describe('Guardas de not found / forbidden', () => {
   it('atualiza perfil de candidato com cargo invalido -> 422', async () => {
     const candidates = new InMemoryCandidateRepository();
     const positions = new InMemoryPositionRepository([position]);
-    await new CreateCandidateProfileUseCase(candidates, positions).execute({
+    await new CreateCandidateProfileUseCase(
+      candidates,
+      positions,
+      cepLookup,
+    ).execute({
       userId: 'u1',
       name: 'C',
-      document: 'd',
-      address: 'x',
-      phone: '9',
+      document: VALID_CPF,
+      address: validTestAddress(),
+      phone: VALID_PHONE,
       positionId: position.id,
     });
 
     await expect(
-      new UpdateCandidateProfileUseCase(candidates, positions).execute({
+      new UpdateCandidateProfileUseCase(candidates, positions, cepLookup).execute({
         userId: 'u1',
         positionId: 'invalido',
       }),
@@ -93,6 +107,7 @@ describe('Guardas de not found / forbidden', () => {
     const ok = await new UpdateCandidateProfileUseCase(
       candidates,
       positions,
+      cepLookup,
     ).execute({ userId: 'u1', positionId: position.id, name: 'Novo' });
     expect(ok.name).toBe('Novo');
   });
@@ -115,12 +130,12 @@ describe('Guardas de not found / forbidden', () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
 
     // com restaurante mas vaga inexistente -> NotFound
-    await new CreateRestaurantProfileUseCase(restaurants).execute({
+    await new CreateRestaurantProfileUseCase(restaurants, cepLookup).execute({
       userId: 'owner',
       name: 'R',
-      cpfCnpj: '1',
-      address: 'x',
-      phone: '9',
+      cpfCnpj: VALID_CNPJ,
+      address: validTestAddress(),
+      phone: VALID_PHONE,
     });
     await expect(
       new UpdateJobUseCase(restaurants, jobs, positions).execute({
@@ -134,12 +149,12 @@ describe('Guardas de not found / forbidden', () => {
     const restaurants = new InMemoryRestaurantRepository();
     const jobs = new InMemoryJobRepository();
     const positions = new InMemoryPositionRepository([position]);
-    await new CreateRestaurantProfileUseCase(restaurants).execute({
+    await new CreateRestaurantProfileUseCase(restaurants, cepLookup).execute({
       userId: 'owner',
       name: 'R',
-      cpfCnpj: '1',
-      address: 'x',
-      phone: '9',
+      cpfCnpj: VALID_CNPJ,
+      address: validTestAddress(),
+      phone: VALID_PHONE,
     });
 
     const created = await new CreateJobUseCase(
@@ -163,12 +178,12 @@ describe('Guardas de not found / forbidden', () => {
     const restaurants = new InMemoryRestaurantRepository();
     const jobs = new InMemoryJobRepository();
     const positions = new InMemoryPositionRepository([position]);
-    await new CreateRestaurantProfileUseCase(restaurants).execute({
+    await new CreateRestaurantProfileUseCase(restaurants, cepLookup).execute({
       userId: 'owner',
       name: 'R',
-      cpfCnpj: '1',
-      address: 'x',
-      phone: '9',
+      cpfCnpj: VALID_CNPJ,
+      address: validTestAddress(),
+      phone: VALID_PHONE,
     });
 
     await expect(

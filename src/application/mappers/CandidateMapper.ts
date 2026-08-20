@@ -1,6 +1,7 @@
 import { Candidate } from '../../domain/entities/Candidate';
 import { Position } from '../../domain/entities/Position';
 import { CandidateResponseDTO, PositionResponseDTO } from '../dto/profile.dto';
+import { AddressMapper } from './AddressMapper';
 
 export class CandidateMapper {
   static toResponse(candidate: Candidate): CandidateResponseDTO {
@@ -8,7 +9,7 @@ export class CandidateMapper {
       id: candidate.id,
       userId: candidate.userId,
       name: candidate.name,
-      address: candidate.address,
+      address: AddressMapper.toDTO(candidate.address),
       positionId: candidate.positionId,
       overallRating: candidate.overallRating,
       bio: candidate.bio,

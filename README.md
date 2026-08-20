@@ -122,6 +122,12 @@ Erro:
 - **Valores monetarios**: enviados como `number` com no maximo 2 casas decimais e retornados como string com 2 casas fixas (ex.: `"100.10"`), preservando a escala de `DECIMAL(10,2)`.
 - **Paginacao**: query `page` e `perPage` (max 100); resposta com `items`, `total`, `page`, `perPage`, `totalPages`.
 - **Autenticacao**: header `Authorization: Bearer {accessToken}` em todas as rotas exceto `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout` e `/health`.
+- **Endereco de perfil**: objeto `address` com `rua`, `bairro`, `numero` (opcional), `complemento` (opcional) e `cep` (8 digitos). No cadastro e na atualizacao, o CEP e validado via ViaCEP e a rua/bairro informados devem corresponder ao retorno do servico quando disponivel.
+- **CPF/CNPJ e telefone**: aceitam mascara na entrada; sao normalizados para apenas digitos antes de persistir.
+  - Candidato (`document`): CPF valido (11 digitos + digitos verificadores).
+  - Restaurante (`cpfCnpj`): CPF ou CNPJ valido.
+  - Telefone (`phone`): celular brasileiro (11 digitos, com DDD) ou fixo (10 digitos, com DDD). Aceita prefixo `+55`. Validado no cadastro e quando enviado em atualizacoes.
+- **Dados sensiveis de perfil**: `document`/`cpf`/`cpfCnpj` e `phone` nao aparecem em `GET /me` nem em `GET /candidates/:id`. O dono do perfil consulta esses campos pelos endpoints dedicados `/me/cpf`, `/me/cpf-cnpj` e `/me/phone`.
 
 ## Modulos e endpoints
 
@@ -143,6 +149,8 @@ Todos implementados seguindo a skill `feature-clean-arch`.
 | --- | --- | --- |
 | POST | `/` | OWNER |
 | GET | `/me` | OWNER |
+| GET | `/me/cpf-cnpj` | OWNER |
+| GET | `/me/phone` | OWNER |
 | PUT | `/me` | OWNER |
 | DELETE | `/me` | OWNER |
 
@@ -152,10 +160,12 @@ Todos implementados seguindo a skill `feature-clean-arch`.
 | --- | --- | --- |
 | POST | `/` | CLIENT |
 | GET | `/me` | CLIENT |
+| GET | `/me/cpf` | CLIENT |
+| GET | `/me/phone` | CLIENT |
 | GET | `/me/reviews` | CLIENT |
 | PUT | `/me` | CLIENT |
 | DELETE | `/me` | CLIENT |
-| GET | `/:id` | autenticado |
+| GET | `/:id` | OWNER |
 | POST | `/:id/badges` | ADMIN |
 | DELETE | `/:id/badges/:badge` | ADMIN |
 

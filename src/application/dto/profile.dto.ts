@@ -1,11 +1,12 @@
 import { Area } from '../../domain/enums/Area';
 import { Badge } from '../../domain/enums/Badge';
+import { AddressDTO } from './address.dto';
 
 export interface CreateRestaurantProfileInput {
   userId: string;
   name: string;
   cpfCnpj: string;
-  address: string;
+  address: AddressDTO;
   phone: string;
   requirementLevel?: number | null;
   bio?: string | null;
@@ -14,7 +15,7 @@ export interface CreateRestaurantProfileInput {
 export interface UpdateRestaurantProfileInput {
   userId: string;
   name?: string;
-  address?: string;
+  address?: AddressDTO;
   phone?: string;
   requirementLevel?: number | null;
   bio?: string | null;
@@ -24,7 +25,7 @@ export interface RestaurantResponseDTO {
   id: string;
   userId: string;
   name: string;
-  address: string;
+  address: AddressDTO;
   requirementLevel: number | null;
   bio: string | null;
   active: boolean;
@@ -52,7 +53,7 @@ export interface CreateCandidateProfileInput {
   userId: string;
   name: string;
   document: string;
-  address: string;
+  address: AddressDTO;
   phone: string;
   positionId: string;
   bio?: string | null;
@@ -61,7 +62,7 @@ export interface CreateCandidateProfileInput {
 export interface UpdateCandidateProfileInput {
   userId: string;
   name?: string;
-  address?: string;
+  address?: AddressDTO;
   phone?: string;
   positionId?: string;
   bio?: string | null;
@@ -76,7 +77,7 @@ export interface CandidateResponseDTO {
   id: string;
   userId: string;
   name: string;
-  address: string;
+  address: AddressDTO;
   positionId: string;
   overallRating: number;
   bio: string | null;

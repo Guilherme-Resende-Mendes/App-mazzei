@@ -1,5 +1,6 @@
 import { Badge } from '../enums/Badge';
 import { Rating } from '../value-objects/Rating';
+import { Address } from '../value-objects/Address';
 
 export interface CandidateBadgeProps {
   badge: Badge;
@@ -11,7 +12,7 @@ export interface CandidateProps {
   userId: string;
   name: string;
   document: string;
-  address: string;
+  address: Address;
   phone: string;
   positionId: string;
   overallRating: number;
@@ -28,7 +29,7 @@ export interface CreateCandidateProps {
   userId: string;
   name: string;
   document: string;
-  address: string;
+  address: Address;
   phone: string;
   positionId: string;
   bio?: string | null;
@@ -36,7 +37,7 @@ export interface CreateCandidateProps {
 
 export interface UpdateCandidateProps {
   name?: string;
-  address?: string;
+  address?: Address;
   phone?: string;
   positionId?: string;
   bio?: string | null;
@@ -91,7 +92,7 @@ export class Candidate {
     return this.props.document;
   }
 
-  get address(): string {
+  get address(): Address {
     return this.props.address;
   }
 

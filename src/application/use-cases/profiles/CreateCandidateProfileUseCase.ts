@@ -1,4 +1,6 @@
 import { Candidate } from '../../../domain/entities/Candidate';
+import { Cpf } from '../../../domain/value-objects/Cpf';
+import { Phone } from '../../../domain/value-objects/Phone';
 import { CandidateRepository } from '../../../domain/repositories/CandidateRepository';
 import { PositionRepository } from '../../../domain/repositories/PositionRepository';
 import {
@@ -9,12 +11,16 @@ import {
   CandidateResponseDTO,
   CreateCandidateProfileInput,
 } from '../../dto/profile.dto';
+import { CepLookupProvider } from '../../interfaces/CepLookupProvider';
+import { AddressMapper } from '../../mappers/AddressMapper';
 import { CandidateMapper } from '../../mappers/CandidateMapper';
+import { validateAddressCep } from '../../services/validateAddressCep';
 
 export class CreateCandidateProfileUseCase {
   constructor(
     private readonly candidateRepository: CandidateRepository,
     private readonly positionRepository: PositionRepository,
+    private readonly cepLookupProvider: CepLookupProvider,
   ) {}
 
   async execute(
@@ -28,8 +34,11 @@ export class CreateCandidateProfileUseCase {
       throw new ConflictError('Este usuario ja possui um perfil de candidato.');
     }
 
+    const document = Cpf.create(input.document).value;
+    const phone = Phone.create(input.phone).value;
+
     const documentInUse = await this.candidateRepository.existsByDocument(
-      input.document,
+      document,
     );
 
     if (documentInUse) {
@@ -46,12 +55,15 @@ export class CreateCandidateProfileUseCase {
       );
     }
 
+    const address = AddressMapper.toDomain(input.address);
+    await validateAddressCep(address, this.cepLookupProvider);
+
     const candidate = Candidate.create({
       userId: input.userId,
       name: input.name,
-      document: input.document,
-      address: input.address,
-      phone: input.phone,
+      document,
+      address,
+      phone,
       positionId: input.positionId,
       bio: input.bio ?? null,
     });

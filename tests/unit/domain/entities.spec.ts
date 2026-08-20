@@ -6,6 +6,7 @@ import { Area } from '../../../src/domain/enums/Area';
 import { JobStatus } from '../../../src/domain/enums/JobStatus';
 import { InvalidStatusTransitionError } from '../../../src/domain/exceptions/InvalidStatusTransitionError';
 import { JobSchedule } from '../../../src/domain/value-objects/JobSchedule';
+import { testAddressEntity } from '../../support/validTestAddress';
 
 const now = new Date('2030-01-01T00:00:00.000Z');
 const schedule = JobSchedule.create(
@@ -20,13 +21,13 @@ describe('Restaurant entity', () => {
       userId: 'u',
       name: 'A',
       cpfCnpj: '1',
-      address: 'x',
+      address: testAddressEntity(),
       phone: '9',
     });
 
     restaurant.update({
       name: 'B',
-      address: 'y',
+      address: testAddressEntity({ street: 'Rua B' }),
       phone: '8',
       requirementLevel: 4,
       bio: 'Restaurante familiar',
@@ -48,7 +49,7 @@ describe('Candidate entity', () => {
       userId: 'u',
       name: 'A',
       document: 'd',
-      address: 'x',
+      address: testAddressEntity(),
       phone: '9',
       positionId: 'p',
     });
