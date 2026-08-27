@@ -1,5 +1,4 @@
 import { Area, isArea } from '../../../src/domain/enums/Area';
-import { Badge, isBadge } from '../../../src/domain/enums/Badge';
 import {
   HiringStatus,
   isHiringStatus,
@@ -20,10 +19,5 @@ describe('Enums guards', () => {
   it('valida Area', () => {
     expect(isArea(Area.BAR)).toBe(true);
     expect(isArea('X')).toBe(false);
-  });
-
-  it('valida Badge', () => {
-    expect(isBadge(Badge.PONTUAL)).toBe(true);
-    expect(isBadge('X')).toBe(false);
   });
 });

@@ -1,11 +1,5 @@
-import { Badge } from '../enums/Badge';
 import { Rating } from '../value-objects/Rating';
 import { Address } from '../value-objects/Address';
-
-export interface CandidateBadgeProps {
-  badge: Badge;
-  grantedAt: Date;
-}
 
 export interface CandidateProps {
   id: string;
@@ -17,7 +11,6 @@ export interface CandidateProps {
   positionId: string;
   overallRating: number;
   bio: string | null;
-  badges: CandidateBadgeProps[];
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -64,7 +57,6 @@ export class Candidate {
       positionId: props.positionId,
       overallRating: 0,
       bio: props.bio ?? null,
-      badges: [],
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -110,10 +102,6 @@ export class Candidate {
 
   get bio(): string | null {
     return this.props.bio;
-  }
-
-  get badges(): CandidateBadgeProps[] {
-    return [...this.props.badges];
   }
 
   get active(): boolean {

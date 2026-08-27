@@ -1,12 +1,10 @@
 import type { Request, Response } from 'express';
-import { Badge } from '../../domain/enums/Badge';
+import { GetCandidateBadgesUseCase } from '../../application/use-cases/badges/GetCandidateBadgesUseCase';
 import { CreateCandidateProfileUseCase } from '../../application/use-cases/profiles/CreateCandidateProfileUseCase';
 import { DeleteCandidateProfileUseCase } from '../../application/use-cases/profiles/DeleteCandidateProfileUseCase';
 import { GetCandidateOwnCpfUseCase } from '../../application/use-cases/profiles/GetCandidateOwnCpfUseCase';
 import { GetCandidateOwnPhoneUseCase } from '../../application/use-cases/profiles/GetCandidateOwnPhoneUseCase';
 import { GetCandidateProfileUseCase } from '../../application/use-cases/profiles/GetCandidateProfileUseCase';
-import { GrantCandidateBadgeUseCase } from '../../application/use-cases/profiles/GrantCandidateBadgeUseCase';
-import { RevokeCandidateBadgeUseCase } from '../../application/use-cases/profiles/RevokeCandidateBadgeUseCase';
 import { UpdateCandidateProfileUseCase } from '../../application/use-cases/profiles/UpdateCandidateProfileUseCase';
 import { ListCandidateReviewsUseCase } from '../../application/use-cases/reviews/ListCandidateReviewsUseCase';
 import { sendSuccess } from '../../shared/utils/httpResponse';
@@ -20,8 +18,7 @@ export class CandidateController {
     private readonly getOwnCpf: GetCandidateOwnCpfUseCase,
     private readonly getOwnPhone: GetCandidateOwnPhoneUseCase,
     private readonly deleteProfile: DeleteCandidateProfileUseCase,
-    private readonly grantBadge: GrantCandidateBadgeUseCase,
-    private readonly revokeBadge: RevokeCandidateBadgeUseCase,
+    private readonly getBadges: GetCandidateBadgesUseCase,
     private readonly listReviews: ListCandidateReviewsUseCase,
   ) {}
 
@@ -77,20 +74,15 @@ export class CandidateController {
     return sendSuccess(res, { message: 'Perfil removido com sucesso' });
   };
 
-  grant = async (req: Request, res: Response): Promise<Response> => {
-    const result = await this.grantBadge.execute({
-      candidateId: getParam(req, 'id'),
-      badge: req.body.badge as Badge,
-    });
-
-    return sendSuccess(res, result, 201);
+  myBadges = async (req: Request, res: Response): Promise<Response> => {
+    const result = await this.getBadges.executeByUserId(getUserId(req));
+    return sendSuccess(res, result);
   };
 
-  revoke = async (req: Request, res: Response): Promise<Response> => {
-    const result = await this.revokeBadge.execute({
-      candidateId: getParam(req, 'id'),
-      badge: getParam(req, 'badge') as Badge,
-    });
+  badgesById = async (req: Request, res: Response): Promise<Response> => {
+    const result = await this.getBadges.executeByCandidateId(
+      getParam(req, 'id'),
+    );
 
     return sendSuccess(res, result);
   };

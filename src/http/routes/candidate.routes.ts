@@ -7,7 +7,6 @@ import { ensureRole } from '../middlewares/ensureRole';
 import { validateBody } from '../middlewares/validateRequest';
 import {
   createCandidateBodySchema,
-  grantBadgeBodySchema,
   updateCandidateBodySchema,
 } from '../validators/profile.validators';
 
@@ -33,6 +32,10 @@ candidateRoutes.get('/me/reviews', ensureRole(Role.CLIENT), (req, res) =>
   controller().reviews(req, res),
 );
 
+candidateRoutes.get('/me/badges', ensureRole(Role.CLIENT), (req, res) =>
+  controller().myBadges(req, res),
+);
+
 candidateRoutes.get('/me/cpf', ensureRole(Role.CLIENT), (req, res) =>
   controller().myCpf(req, res),
 );
@@ -52,23 +55,12 @@ candidateRoutes.delete('/me', ensureRole(Role.CLIENT), (req, res) =>
   controller().remove(req, res),
 );
 
-candidateRoutes.get(
-  '/:id',
-  ensureRole(Role.OWNER),
-  (req, res) => controller().getById(req, res),
+candidateRoutes.get('/:id/badges', ensureRole(Role.OWNER), (req, res) =>
+  controller().badgesById(req, res),
 );
 
-candidateRoutes.post(
-  '/:id/badges',
-  ensureRole(Role.ADMIN),
-  validateBody(grantBadgeBodySchema),
-  (req, res) => controller().grant(req, res),
-);
-
-candidateRoutes.delete(
-  '/:id/badges/:badge',
-  ensureRole(Role.ADMIN),
-  (req, res) => controller().revoke(req, res),
+candidateRoutes.get('/:id', ensureRole(Role.OWNER), (req, res) =>
+  controller().getById(req, res),
 );
 
 export { candidateRoutes };

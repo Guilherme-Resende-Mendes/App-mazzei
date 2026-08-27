@@ -15,6 +15,32 @@ interface PositionSeed {
   level: number;
 }
 
+interface BadgeSeed {
+  slug: string;
+  name: string;
+  description: string;
+  sortOrder: number;
+}
+
+/**
+ * Catalogo inicial de selos. Novos selos podem entrar aqui ou direto na tabela
+ * `selos`, sem migration nem deploy. `icone` fica a cargo do produto.
+ */
+const badges: BadgeSeed[] = [
+  {
+    slug: 'PONTUAL',
+    name: 'Pontual',
+    description: 'Chegou no horario combinado.',
+    sortOrder: 1,
+  },
+  {
+    slug: 'FLEXIVEL',
+    name: 'Flexivel',
+    description: 'Se adaptou bem as necessidades do turno.',
+    sortOrder: 2,
+  },
+];
+
 const positions: PositionSeed[] = [
   { area: Area.COZINHA, name: 'Auxiliar de Cozinha', level: 1 },
   { area: Area.COZINHA, name: 'Cozinheiro', level: 2 },
@@ -42,8 +68,26 @@ async function main(): Promise<void> {
     await prisma.position.create({ data: position });
   }
 
-  const total = await prisma.position.count();
-  console.info(`Seed concluido. Cargos cadastrados: ${total}`);
+  // A migration cria os selos convertidos do enum apenas com slug e nome, para nao
+  // quebrar as FKs. O seed e o dono do conteudo que declara; `icone` e `ativo` ficam
+  // por conta do produto e nao sao sobrescritos.
+  for (const badge of badges) {
+    await prisma.badge.upsert({
+      where: { slug: badge.slug },
+      update: {
+        name: badge.name,
+        description: badge.description,
+        sortOrder: badge.sortOrder,
+      },
+      create: badge,
+    });
+  }
+
+  const totalPositions = await prisma.position.count();
+  const totalBadges = await prisma.badge.count();
+  console.info(
+    `Seed concluido. Cargos: ${totalPositions}. Selos: ${totalBadges}.`,
+  );
 }
 
 main()

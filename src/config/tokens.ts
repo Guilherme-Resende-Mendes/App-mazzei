@@ -8,6 +8,8 @@ export const TOKENS = {
   RefreshTokenRepository: 'RefreshTokenRepository',
   RestaurantRepository: 'RestaurantRepository',
   CandidateRepository: 'CandidateRepository',
+  BadgeRepository: 'BadgeRepository',
+  CandidateBadgeRepository: 'CandidateBadgeRepository',
   PositionRepository: 'PositionRepository',
   JobRepository: 'JobRepository',
   HiringRepository: 'HiringRepository',
