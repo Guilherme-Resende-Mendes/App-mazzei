@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { Area } from '../../domain/enums/Area';
-import { Badge } from '../../domain/enums/Badge';
 import {
   isValidBrazilianPhone,
   isValidCpf,
@@ -99,12 +98,6 @@ export const updateCandidateBodySchema = z
     phone: phoneBodySchema.optional(),
     positionId: z.uuid().optional(),
     bio: z.string().max(2000).nullable().optional(),
-  })
-  .strict();
-
-export const grantBadgeBodySchema = z
-  .object({
-    badge: z.enum([Badge.PONTUAL, Badge.FLEXIVEL]),
   })
   .strict();
 

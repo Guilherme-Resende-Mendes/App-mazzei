@@ -1,5 +1,4 @@
 import { Area } from '../../domain/enums/Area';
-import { Badge } from '../../domain/enums/Badge';
 import { AddressDTO } from './address.dto';
 
 export interface CreateRestaurantProfileInput {
@@ -68,11 +67,6 @@ export interface UpdateCandidateProfileInput {
   bio?: string | null;
 }
 
-export interface CandidateBadgeDTO {
-  badge: Badge;
-  grantedAt: string;
-}
-
 export interface CandidateResponseDTO {
   id: string;
   userId: string;
@@ -81,7 +75,6 @@ export interface CandidateResponseDTO {
   positionId: string;
   overallRating: number;
   bio: string | null;
-  badges: CandidateBadgeDTO[];
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -93,16 +86,6 @@ export interface PositionResponseDTO {
   name: string;
   level: number;
   active: boolean;
-}
-
-export interface GrantBadgeInput {
-  candidateId: string;
-  badge: Badge;
-}
-
-export interface RevokeBadgeInput {
-  candidateId: string;
-  badge: Badge;
 }
 
 export interface ListPositionsInput {

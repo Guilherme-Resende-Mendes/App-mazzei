@@ -5,6 +5,9 @@ import { CancelApplicationUseCase } from '../../application/use-cases/applicatio
 import { ListCandidateApplicationsUseCase } from '../../application/use-cases/applications/ListCandidateApplicationsUseCase';
 import { ListJobApplicationsUseCase } from '../../application/use-cases/applications/ListJobApplicationsUseCase';
 import { RejectCandidateUseCase } from '../../application/use-cases/applications/RejectCandidateUseCase';
+import { GrantCandidateBadgeUseCase } from '../../application/use-cases/badges/GrantCandidateBadgeUseCase';
+import { ListHiringBadgesUseCase } from '../../application/use-cases/badges/ListHiringBadgesUseCase';
+import { RevokeCandidateBadgeUseCase } from '../../application/use-cases/badges/RevokeCandidateBadgeUseCase';
 import { sendSuccess } from '../../shared/utils/httpResponse';
 import { getParam, getUserId } from '../utils/getUserId';
 
@@ -16,6 +19,9 @@ export class ApplicationController {
     private readonly listJobApplications: ListJobApplicationsUseCase,
     private readonly acceptCandidate: AcceptCandidateUseCase,
     private readonly rejectCandidate: RejectCandidateUseCase,
+    private readonly grantBadge: GrantCandidateBadgeUseCase,
+    private readonly revokeBadge: RevokeCandidateBadgeUseCase,
+    private readonly listHiringBadges: ListHiringBadgesUseCase,
   ) {}
 
   apply = async (req: Request, res: Response): Promise<Response> => {
@@ -66,6 +72,41 @@ export class ApplicationController {
 
   reject = async (req: Request, res: Response): Promise<Response> => {
     const result = await this.rejectCandidate.execute({
+      userId: getUserId(req),
+      hiringId: getParam(req, 'id'),
+    });
+
+    return sendSuccess(res, result);
+  };
+
+  grantBadgeToCandidate = async (
+    req: Request,
+    res: Response,
+  ): Promise<Response> => {
+    const result = await this.grantBadge.execute({
+      userId: getUserId(req),
+      hiringId: getParam(req, 'id'),
+      badge: req.body.badge as string,
+    });
+
+    return sendSuccess(res, result, 201);
+  };
+
+  revokeBadgeFromCandidate = async (
+    req: Request,
+    res: Response,
+  ): Promise<Response> => {
+    const result = await this.revokeBadge.execute({
+      userId: getUserId(req),
+      hiringId: getParam(req, 'id'),
+      badge: getParam(req, 'badge'),
+    });
+
+    return sendSuccess(res, result);
+  };
+
+  listBadges = async (req: Request, res: Response): Promise<Response> => {
+    const result = await this.listHiringBadges.execute({
       userId: getUserId(req),
       hiringId: getParam(req, 'id'),
     });

@@ -1,8 +1,6 @@
 import { Candidate } from '../../../domain/entities/Candidate';
-import { Badge } from '../../../domain/enums/Badge';
 import { CandidateRepository } from '../../../domain/repositories/CandidateRepository';
 import { PrismaClientOrTx } from '../prisma/client';
-import { BadgeMapper } from '../mappers/BadgeMapper';
 import { CandidatePrismaMapper } from '../mappers/CandidatePrismaMapper';
 import { AddressPrismaMapper } from '../mappers/AddressPrismaMapper';
 
@@ -22,7 +20,6 @@ export class PrismaCandidateRepository implements CandidateRepository {
         overallRating: candidate.overallRating,
         bio: candidate.bio,
       },
-      include: { badges: true },
     });
 
     return CandidatePrismaMapper.toDomain(row);
@@ -39,7 +36,6 @@ export class PrismaCandidateRepository implements CandidateRepository {
         bio: candidate.bio,
         active: candidate.active,
       },
-      include: { badges: true },
     });
 
     return CandidatePrismaMapper.toDomain(row);
@@ -48,7 +44,6 @@ export class PrismaCandidateRepository implements CandidateRepository {
   async findById(id: string): Promise<Candidate | null> {
     const row = await this.prisma.candidate.findFirst({
       where: { id, deletedAt: null },
-      include: { badges: true },
     });
 
     return row ? CandidatePrismaMapper.toDomain(row) : null;
@@ -57,7 +52,6 @@ export class PrismaCandidateRepository implements CandidateRepository {
   async findByUserId(userId: string): Promise<Candidate | null> {
     const row = await this.prisma.candidate.findFirst({
       where: { userId, deletedAt: null },
-      include: { badges: true },
     });
 
     return row ? CandidatePrismaMapper.toDomain(row) : null;
@@ -72,31 +66,6 @@ export class PrismaCandidateRepository implements CandidateRepository {
     await this.prisma.candidate.update({
       where: { id },
       data: { overallRating: rating },
-    });
-  }
-
-  async addBadge(
-    candidateId: string,
-    badge: Badge,
-    grantedAt: Date,
-  ): Promise<void> {
-    await this.prisma.candidateBadge.create({
-      data: {
-        candidateId,
-        badge: BadgeMapper.toPrisma(badge),
-        grantedAt,
-      },
-    });
-  }
-
-  async removeBadge(candidateId: string, badge: Badge): Promise<void> {
-    await this.prisma.candidateBadge.delete({
-      where: {
-        candidateId_badge: {
-          candidateId,
-          badge: BadgeMapper.toPrisma(badge),
-        },
-      },
     });
   }
 

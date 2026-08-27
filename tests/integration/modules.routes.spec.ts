@@ -12,6 +12,8 @@ import { InMemoryUserRepository } from '../support/InMemoryUserRepository';
 import { InMemoryRefreshTokenRepository } from '../support/InMemoryRefreshTokenRepository';
 import { InMemoryRestaurantRepository } from '../support/InMemoryRestaurantRepository';
 import { InMemoryCandidateRepository } from '../support/InMemoryCandidateRepository';
+import { InMemoryBadgeRepository } from '../support/InMemoryBadgeRepository';
+import { InMemoryCandidateBadgeRepository } from '../support/InMemoryCandidateBadgeRepository';
 import { InMemoryPositionRepository } from '../support/InMemoryPositionRepository';
 import { InMemoryJobRepository } from '../support/InMemoryJobRepository';
 import { InMemoryHiringRepository } from '../support/InMemoryHiringRepository';
@@ -66,6 +68,14 @@ describe('Modules routes (integration)', () => {
     );
     container.registerInstance(TOKENS.RestaurantRepository, restaurants);
     container.registerInstance(TOKENS.CandidateRepository, candidates);
+    container.registerInstance(
+      TOKENS.BadgeRepository,
+      new InMemoryBadgeRepository(),
+    );
+    container.registerInstance(
+      TOKENS.CandidateBadgeRepository,
+      new InMemoryCandidateBadgeRepository(),
+    );
     container.registerInstance(TOKENS.PositionRepository, positions);
     container.registerInstance(TOKENS.JobRepository, jobs);
     container.registerInstance(TOKENS.HiringRepository, hirings);
@@ -420,25 +430,179 @@ describe('Modules routes (integration)', () => {
     expect(reapply.body.data.hourlyRate).toBe('180.00');
   });
 
-  it('concede e revoga selos (ADMIN)', async () => {
+  /** Leva uma vaga nova ate o fim: candidatura aceita e trabalho concluido. */
+  async function concludeWork(): Promise<string> {
+    const jobId = await createJob();
+
+    const apply = await request(app)
+      .post(`/api/jobs/${jobId}/applications`)
+      .set('Authorization', client())
+      .send({ hourlyRate: 150 });
+    const hiringId = apply.body.data.id as string;
+
+    await request(app)
+      .post(`/api/applications/${hiringId}/accept`)
+      .set('Authorization', owner())
+      .send({ agreedPrice: 200 });
+
+    await request(app)
+      .post(`/api/jobs/${jobId}/finish`)
+      .set('Authorization', owner())
+      .send({
+        evaluations: [{ hiringId, deliveryRating: 5, punctualityRating: 5 }],
+      });
+
+    return hiringId;
+  }
+
+  interface BadgeCountBody {
+    badges: { slug: string; count: number }[];
+  }
+
+  const countOf = (body: unknown, slug: string): number =>
+    (body as BadgeCountBody).badges.find((item) => item.slug === slug)?.count ??
+    0;
+
+  const slugsOf = (body: unknown): string[] =>
+    (body as BadgeCountBody).badges.map((item) => item.slug);
+
+  /** O placar nunca deve trazer selos com contagem zero. */
+  const hasOnlyGranted = (body: unknown): boolean =>
+    (body as BadgeCountBody).badges.every((item) => item.count > 0);
+
+  it('expoe o catalogo de selos com rotulo e descricao', async () => {
+    const catalog = await request(app)
+      .get('/api/badges')
+      .set('Authorization', client());
+
+    expect(catalog.status).toBe(200);
+    expect(
+      catalog.body.data.map((item: { slug: string }) => item.slug),
+    ).toEqual(['PONTUAL', 'FLEXIVEL']);
+    expect(catalog.body.data[0].name).toBe('Pontual');
+  });
+
+  it('somente o restaurante concede selos, e apenas apos o trabalho concluido', async () => {
+    const hiringId = await concludeWork();
+
     const grant = await request(app)
-      .post(`/api/candidates/${candidateId}/badges`)
-      .set('Authorization', admin())
+      .post(`/api/applications/${hiringId}/badges`)
+      .set('Authorization', owner())
       .send({ badge: 'PONTUAL' });
     expect(grant.status).toBe(201);
-    expect(grant.body.data.badges).toHaveLength(1);
+    expect(grant.body.data).toMatchObject({
+      slug: 'PONTUAL',
+      name: 'Pontual',
+      hiringId,
+    });
+    expect(grant.body.data.grantedAt).toEqual(expect.any(String));
+    expect(grant.body.data.badges).toBeUndefined();
 
-    const forbidden = await request(app)
-      .post(`/api/candidates/${candidateId}/badges`)
+    const duplicated = await request(app)
+      .post(`/api/applications/${hiringId}/badges`)
+      .set('Authorization', owner())
+      .send({ badge: 'PONTUAL' });
+    expect(duplicated.status).toBe(409);
+
+    const byClient = await request(app)
+      .post(`/api/applications/${hiringId}/badges`)
       .set('Authorization', client())
       .send({ badge: 'FLEXIVEL' });
-    expect(forbidden.status).toBe(403);
+    expect(byClient.status).toBe(403);
 
     const revoke = await request(app)
-      .delete(`/api/candidates/${candidateId}/badges/PONTUAL`)
-      .set('Authorization', admin());
+      .delete(`/api/applications/${hiringId}/badges/PONTUAL`)
+      .set('Authorization', owner());
     expect(revoke.status).toBe(200);
-    expect(revoke.body.data.badges).toHaveLength(0);
+    expect(slugsOf(revoke.body.data)).not.toContain('PONTUAL');
+    expect(hasOnlyGranted(revoke.body.data)).toBe(true);
+  });
+
+  it('rejeita slug malformado com 400 e slug fora do catalogo com 422', async () => {
+    const hiringId = await concludeWork();
+
+    const malformed = await request(app)
+      .post(`/api/applications/${hiringId}/badges`)
+      .set('Authorization', owner())
+      .send({ badge: '!!' });
+    expect(malformed.status).toBe(400);
+
+    const unknown = await request(app)
+      .post(`/api/applications/${hiringId}/badges`)
+      .set('Authorization', owner())
+      .send({ badge: 'INEXISTENTE' });
+    expect(unknown.status).toBe(422);
+  });
+
+  it('recusa selo em trabalho que ainda nao foi concluido', async () => {
+    const jobId = await createJob();
+
+    const apply = await request(app)
+      .post(`/api/jobs/${jobId}/applications`)
+      .set('Authorization', client())
+      .send({ hourlyRate: 150 });
+    const hiringId = apply.body.data.id as string;
+
+    await request(app)
+      .post(`/api/applications/${hiringId}/accept`)
+      .set('Authorization', owner())
+      .send({ agreedPrice: 200 });
+
+    const grant = await request(app)
+      .post(`/api/applications/${hiringId}/badges`)
+      .set('Authorization', owner())
+      .send({ badge: 'PONTUAL' });
+    expect(grant.status).toBe(409);
+  });
+
+  it('expoe a contagem de selos para o candidato e para o restaurante', async () => {
+    const first = await concludeWork();
+    const second = await concludeWork();
+
+    for (const hiringId of [first, second]) {
+      await request(app)
+        .post(`/api/applications/${hiringId}/badges`)
+        .set('Authorization', owner())
+        .send({ badge: 'FLEXIVEL' });
+    }
+
+    const mine = await request(app)
+      .get('/api/candidates/me/badges')
+      .set('Authorization', client());
+    expect(mine.status).toBe(200);
+    expect(countOf(mine.body.data, 'FLEXIVEL')).toBe(2);
+    expect(hasOnlyGranted(mine.body.data)).toBe(true);
+    expect(slugsOf(mine.body.data)).not.toContain('PONTUAL');
+
+    const candidate = await request(app)
+      .get('/api/candidates/me')
+      .set('Authorization', client());
+
+    const byRestaurant = await request(app)
+      .get(`/api/candidates/${candidate.body.data.id}/badges`)
+      .set('Authorization', owner());
+    expect(byRestaurant.status).toBe(200);
+    expect(countOf(byRestaurant.body.data, 'FLEXIVEL')).toBe(2);
+
+    const perHiring = await request(app)
+      .get(`/api/applications/${first}/badges`)
+      .set('Authorization', owner());
+    expect(perHiring.status).toBe(200);
+    expect(slugsOf(perHiring.body.data)).toEqual(['FLEXIVEL']);
+    expect(countOf(perHiring.body.data, 'FLEXIVEL')).toBe(1);
+
+    const withoutBadges = await request(app)
+      .get(`/api/applications/${await concludeWork()}/badges`)
+      .set('Authorization', owner());
+    expect(withoutBadges.status).toBe(200);
+    expect(withoutBadges.body.data.totalGranted).toBe(0);
+    expect(withoutBadges.body.data.badges).toEqual([]);
+
+    const byAdmin = await request(app)
+      .get(`/api/candidates/${candidate.body.data.id}/badges`)
+      .set('Authorization', admin());
+    expect(byAdmin.status).toBe(200);
+    expect(countOf(byAdmin.body.data, 'FLEXIVEL')).toBe(2);
   });
 
   it('aplica RBAC: cliente nao cria vaga (403) e owner nao se candidata (403)', async () => {

@@ -14,17 +14,20 @@ import {
 import {
   createCandidateBodySchema,
   createRestaurantBodySchema,
-  grantBadgeBodySchema,
   updateCandidateBodySchema,
   updateRestaurantBodySchema,
 } from '../http/validators/profile.validators';
+import { grantBadgeBodySchema } from '../http/validators/badge.validators';
 import {
   createJobBodySchema,
   finishJobBodySchema,
   rescheduleJobBodySchema,
   updateJobBodySchema,
 } from '../http/validators/job.validators';
-import { acceptCandidateBodySchema, applyForJobBodySchema } from '../http/validators/application.validators';
+import {
+  acceptCandidateBodySchema,
+  applyForJobBodySchema,
+} from '../http/validators/application.validators';
 import { env } from './env';
 
 extendZodWithOpenApi(z);
@@ -75,6 +78,8 @@ const errorEnvelope = registry.register(
 const jsonContent = <T extends z.ZodTypeAny>(schema: T) => ({
   'application/json': { schema },
 });
+
+const grantBadgeBodyExample = { badge: 'PONTUAL' };
 
 const finishJobBodyExample = {
   evaluations: [
@@ -238,10 +243,52 @@ const restaurantPhoneResponseSchema = registry.register(
   z.object({ phone: z.string() }).openapi('RestaurantPhone'),
 );
 
-const candidateBadgeSchema = z.object({
-  badge: z.enum(['PONTUAL', 'FLEXIVEL']),
-  grantedAt: z.string(),
-});
+const badgeResponseSchema = registry.register(
+  'Badge',
+  z
+    .object({
+      slug: z.string(),
+      name: z.string(),
+      description: z.string().nullable(),
+      icon: z.string().nullable(),
+    })
+    .openapi('Badge'),
+);
+
+const badgeGrantResponseSchema = registry.register(
+  'BadgeGrant',
+  z
+    .object({
+      slug: z.string(),
+      name: z.string(),
+      description: z.string().nullable(),
+      icon: z.string().nullable(),
+      candidateId: z.string(),
+      hiringId: z.string(),
+      grantedAt: z.string(),
+    })
+    .openapi('BadgeGrant'),
+);
+
+const candidateBadgesResponseSchema = registry.register(
+  'CandidateBadges',
+  z
+    .object({
+      candidateId: z.string(),
+      totalGranted: z.number(),
+      badges: z.array(
+        z.object({
+          slug: z.string(),
+          name: z.string(),
+          description: z.string().nullable(),
+          icon: z.string().nullable(),
+          count: z.number(),
+          lastGrantedAt: z.string().nullable(),
+        }),
+      ),
+    })
+    .openapi('CandidateBadges'),
+);
 
 const candidateResponseSchema = registry.register(
   'Candidate',
@@ -254,7 +301,6 @@ const candidateResponseSchema = registry.register(
       positionId: z.string(),
       overallRating: z.number(),
       bio: z.string().nullable(),
-      badges: z.array(candidateBadgeSchema),
       active: z.boolean(),
       createdAt: z.string(),
       updatedAt: z.string(),
@@ -608,42 +654,43 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: 'post',
-  path: '/candidates/{id}/badges',
-  tags: ['Candidates'],
-  summary: 'Concede um selo ao candidato (ADMIN)',
+  method: 'get',
+  path: '/candidates/me/badges',
+  tags: ['Badges'],
+  summary: 'Placar de selos do proprio freelancer (CLIENT)',
+  description:
+    'Retorna somente os selos que o freelancer recebeu, com quantas vezes cada ' +
+    'um foi concedido. Selos nunca concedidos nao aparecem; a lista vem vazia ' +
+    'quando ele ainda nao tem nenhum.',
   security: [{ bearerAuth: [] }],
-  request: { ...idParam, body: { content: jsonContent(grantBadgeBodySchema) } },
   responses: {
-    201: {
-      description: 'Selo concedido',
-      content: jsonContent(successEnvelope(candidateResponseSchema)),
+    200: {
+      description: 'Selos do candidato',
+      content: jsonContent(successEnvelope(candidateBadgesResponseSchema)),
     },
-    403: errorResponse('Sem permissao'),
-    404: errorResponse('Candidato nao encontrado'),
-    409: errorResponse('Selo ja concedido'),
+    401: errorResponse('Nao autenticado'),
+    403: errorResponse('Sem perfil de candidato'),
   },
 });
 
 registry.registerPath({
-  method: 'delete',
-  path: '/candidates/{id}/badges/{badge}',
-  tags: ['Candidates'],
-  summary: 'Revoga um selo do candidato (ADMIN)',
+  method: 'get',
+  path: '/candidates/{id}/badges',
+  tags: ['Badges'],
+  summary: 'Placar de selos de um freelancer (OWNER ou ADMIN)',
+  description:
+    'Retorna somente os selos que o freelancer recebeu. Para conhecer os selos ' +
+    'que podem ser concedidos, use GET /badges.',
   security: [{ bearerAuth: [] }],
-  request: {
-    params: z.object({
-      id: z.string().uuid(),
-      badge: z.enum(['PONTUAL', 'FLEXIVEL']),
-    }),
-  },
+  request: idParam,
   responses: {
     200: {
-      description: 'Selo revogado',
-      content: jsonContent(successEnvelope(candidateResponseSchema)),
+      description: 'Selos do candidato',
+      content: jsonContent(successEnvelope(candidateBadgesResponseSchema)),
     },
+    401: errorResponse('Nao autenticado'),
     403: errorResponse('Sem permissao'),
-    404: errorResponse('Candidato ou selo nao encontrado'),
+    404: errorResponse('Candidato nao encontrado'),
   },
 });
 
@@ -998,6 +1045,119 @@ registry.registerPath({
   },
 });
 
+// ============================================================
+// Paths - Badges (concedidos pelo restaurante sobre trabalho concluido)
+// ============================================================
+
+registry.registerPath({
+  method: 'get',
+  path: '/badges',
+  tags: ['Badges'],
+  summary: 'Catalogo de selos ativos (autenticado)',
+  description:
+    'Fonte dos rotulos, descricoes e icones. O front-end nao precisa manter um ' +
+    'mapa proprio de selos, e novos selos aparecem sem deploy.',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: 'Selos disponiveis',
+      content: jsonContent(successEnvelope(z.array(badgeResponseSchema))),
+    },
+    401: errorResponse('Nao autenticado'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/applications/{id}/badges',
+  tags: ['Badges'],
+  summary: 'Selos ja concedidos nesta contratacao (OWNER)',
+  description:
+    'Apenas os selos concedidos neste trabalho. Lista vazia quando nenhum foi ' +
+    'concedido ainda.',
+  security: [{ bearerAuth: [] }],
+  request: idParam,
+  responses: {
+    200: {
+      description: 'Selos da contratacao',
+      content: jsonContent(successEnvelope(candidateBadgesResponseSchema)),
+    },
+    401: errorResponse('Nao autenticado'),
+    403: errorResponse('A contratacao nao e do seu restaurante'),
+    404: errorResponse('Contratacao nao encontrada'),
+    409: errorResponse('Trabalho ainda nao concluido'),
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/applications/{id}/badges',
+  tags: ['Badges'],
+  summary: 'Concede um selo ao freelancer por um trabalho concluido (OWNER)',
+  description:
+    'Somente o restaurante dono da contratacao pode conceder, e apenas apos a ' +
+    'conclusao do trabalho. Cada selo vale uma vez por contratacao, entao o ' +
+    'mesmo selo se acumula ao longo de trabalhos diferentes. O campo `badge` e o ' +
+    '`slug` do catalogo, obtido em `GET /badges`. A resposta traz apenas a ' +
+    'concessao criada; para o placar completo use as rotas de consulta.',
+  security: [{ bearerAuth: [] }],
+  request: {
+    ...idParam,
+    body: {
+      content: {
+        'application/json': {
+          schema: grantBadgeBodySchema,
+          example: grantBadgeBodyExample,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Selo concedido; retorna somente a concessao criada',
+      content: jsonContent(successEnvelope(badgeGrantResponseSchema)),
+    },
+    400: errorResponse('Slug malformado ou corpo invalido'),
+    401: errorResponse('Nao autenticado'),
+    403: errorResponse('A contratacao nao e do seu restaurante'),
+    404: errorResponse('Contratacao nao encontrada'),
+    409: errorResponse('Trabalho nao concluido ou selo ja concedido'),
+    422: errorResponse('Selo inexistente no catalogo ou inativo'),
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/applications/{id}/badges/{badge}',
+  tags: ['Badges'],
+  summary: 'Revoga um selo concedido nesta contratacao (OWNER)',
+  description:
+    'Aceita selos inativos, para permitir desfazer concessoes de selos ja ' +
+    'aposentados do catalogo.',
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+      badge: z
+        .string()
+        .describe('Slug do selo no catalogo, como retornado por GET /badges')
+        .openapi({ example: 'PONTUAL' }),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Selo revogado; retorna o placar atualizado do candidato',
+      content: jsonContent(successEnvelope(candidateBadgesResponseSchema)),
+    },
+    400: errorResponse('Slug malformado'),
+    401: errorResponse('Nao autenticado'),
+    403: errorResponse('A contratacao nao e do seu restaurante'),
+    404: errorResponse('Contratacao ou selo nao encontrado'),
+    409: errorResponse('Trabalho ainda nao concluido'),
+    422: errorResponse('Selo inexistente no catalogo'),
+  },
+});
+
 export function buildOpenApiDocument(): ReturnType<
   OpenApiGeneratorV3['generateDocument']
 > {
@@ -1009,7 +1169,7 @@ export function buildOpenApiDocument(): ReturnType<
       title: 'Mazzei API',
       version: '1.0.0',
       description:
-        'API da plataforma onde restaurantes contratam freelancers. Modulos: Auth, Restaurants, Candidates, Positions, Jobs, Applications e Reviews.',
+        'API da plataforma onde restaurantes contratam freelancers. Modulos: Auth, Restaurants, Candidates, Positions, Jobs, Applications, Badges e Reviews.',
     },
     servers: [{ url: env.API_PREFIX }],
   });

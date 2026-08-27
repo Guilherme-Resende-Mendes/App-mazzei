@@ -1,18 +1,14 @@
 import { Position } from '../../../src/domain/entities/Position';
 import { Area } from '../../../src/domain/enums/Area';
-import { Badge } from '../../../src/domain/enums/Badge';
 import { CreateRestaurantProfileUseCase } from '../../../src/application/use-cases/profiles/CreateRestaurantProfileUseCase';
 import { GetRestaurantOwnCpfCnpjUseCase } from '../../../src/application/use-cases/profiles/GetRestaurantOwnCpfCnpjUseCase';
 import { GetRestaurantOwnPhoneUseCase } from '../../../src/application/use-cases/profiles/GetRestaurantOwnPhoneUseCase';
 import { GetCandidateOwnCpfUseCase } from '../../../src/application/use-cases/profiles/GetCandidateOwnCpfUseCase';
 import { GetCandidateOwnPhoneUseCase } from '../../../src/application/use-cases/profiles/GetCandidateOwnPhoneUseCase';
 import { CreateCandidateProfileUseCase } from '../../../src/application/use-cases/profiles/CreateCandidateProfileUseCase';
-import { GrantCandidateBadgeUseCase } from '../../../src/application/use-cases/profiles/GrantCandidateBadgeUseCase';
-import { RevokeCandidateBadgeUseCase } from '../../../src/application/use-cases/profiles/RevokeCandidateBadgeUseCase';
 import { ListPositionsUseCase } from '../../../src/application/use-cases/profiles/ListPositionsUseCase';
 import {
   ConflictError,
-  NotFoundError,
   UnprocessableEntityError,
 } from '../../../src/shared/errors/AppError';
 import { FakeCepLookupProvider } from '../../support/FakeCepLookupProvider';
@@ -83,7 +79,9 @@ describe('Profiles use cases', () => {
       phone: VALID_PHONE,
     });
 
-    const cpfCnpj = await new GetRestaurantOwnCpfCnpjUseCase(repo).execute('u1');
+    const cpfCnpj = await new GetRestaurantOwnCpfCnpjUseCase(repo).execute(
+      'u1',
+    );
     expect(cpfCnpj.cpfCnpj).toBe(VALID_CNPJ);
 
     const phone = await new GetRestaurantOwnPhoneUseCase(repo).execute('u1');
@@ -134,41 +132,6 @@ describe('Profiles use cases', () => {
         positionId: 'inexistente',
       }),
     ).rejects.toBeInstanceOf(UnprocessableEntityError);
-  });
-
-  it('concede e revoga selos (ADMIN), bloqueando duplicidade', async () => {
-    const candidates = new InMemoryCandidateRepository();
-    const positions = new InMemoryPositionRepository([position]);
-    await new CreateCandidateProfileUseCase(
-      candidates,
-      positions,
-      cepLookup,
-    ).execute({
-      userId: 'u1',
-      name: 'C',
-      document: VALID_CPF,
-      address: validTestAddress(),
-      phone: VALID_PHONE,
-      positionId: position.id,
-    });
-    const candidateId = candidates.items[0].id;
-
-    const grant = new GrantCandidateBadgeUseCase(candidates);
-    const revoke = new RevokeCandidateBadgeUseCase(candidates);
-
-    const granted = await grant.execute({ candidateId, badge: Badge.PONTUAL });
-    expect(granted.badges).toHaveLength(1);
-
-    await expect(
-      grant.execute({ candidateId, badge: Badge.PONTUAL }),
-    ).rejects.toBeInstanceOf(ConflictError);
-
-    const revoked = await revoke.execute({ candidateId, badge: Badge.PONTUAL });
-    expect(revoked.badges).toHaveLength(0);
-
-    await expect(
-      revoke.execute({ candidateId, badge: Badge.PONTUAL }),
-    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('lista cargos por area', async () => {

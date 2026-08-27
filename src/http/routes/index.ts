@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { sendSuccess } from '../../shared/utils/httpResponse';
 import { applicationRoutes } from './application.routes';
 import { authRoutes } from './auth.routes';
+import { badgeRoutes } from './badge.routes';
 import { candidateRoutes } from './candidate.routes';
 import { jobRoutes } from './job.routes';
 import { positionRoutes } from './position.routes';
@@ -17,6 +18,7 @@ routes.use('/auth', authRoutes);
 routes.use('/restaurants', restaurantRoutes);
 routes.use('/candidates', candidateRoutes);
 routes.use('/positions', positionRoutes);
+routes.use('/badges', badgeRoutes);
 routes.use('/jobs', jobRoutes);
 routes.use('/applications', applicationRoutes);
 

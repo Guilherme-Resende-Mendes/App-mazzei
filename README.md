@@ -165,15 +165,21 @@ Todos implementados seguindo a skill `feature-clean-arch`.
 | GET | `/me/reviews` | CLIENT |
 | PUT | `/me` | CLIENT |
 | DELETE | `/me` | CLIENT |
+| GET | `/me/badges` | CLIENT (placar de selos) |
 | GET | `/:id` | OWNER |
-| POST | `/:id/badges` | ADMIN |
-| DELETE | `/:id/badges/:badge` | ADMIN |
+| GET | `/:id/badges` | OWNER (placar de selos) |
 
 ### Positions (`/api/positions`)
 
 | Metodo | Rota | Acesso |
 | --- | --- | --- |
 | GET | `/` | autenticado |
+
+### Badges (`/api/badges`)
+
+| Metodo | Rota | Acesso |
+| --- | --- | --- |
+| GET | `/` | autenticado (catalogo de selos ativos) |
 
 ### Jobs (`/api/jobs`)
 
@@ -201,6 +207,9 @@ Todos implementados seguindo a skill `feature-clean-arch`.
 | POST | `/:id/cancel` | CLIENT |
 | POST | `/:id/accept` | OWNER (requer `agreedPrice`) |
 | POST | `/:id/reject` | OWNER |
+| GET | `/:id/badges` | OWNER (selos concedidos neste trabalho) |
+| POST | `/:id/badges` | OWNER (concede selo) |
+| DELETE | `/:id/badges/:badge` | OWNER (revoga selo) |
 
 Transicoes de estado (activate, cancel, finish, reschedule, accept, reject) usam `POST` em action endpoints por serem comandos de dominio com regras e efeitos colaterais, e nao CRUD generico.
 
@@ -222,6 +231,19 @@ Transicoes de estado (activate, cancel, finish, reschedule, accept, reject) usam
 - **Re-candidatura**: se o candidato cancelou (`CANCELADA`), uma nova candidatura reativa o registro existente e volta para `SOLICITADA`. Nos demais status a nova candidatura e bloqueada com `409`.
 - Cancelar uma candidatura `ACEITA` marca `cancellationFault` (falta), que impacta a reputacao do candidato.
 - Apenas contratacoes `CONCLUIDA` sem falta e com as duas notas entram no calculo da nota geral.
+
+### Selos (`Badge` e `CandidateBadge`)
+
+- **Catalogo em tabela, nao enum.** A tabela `selos` guarda `slug` (identidade estavel exposta pela API), `nome`, `descricao`, `icone` e `ordem`. Adicionar um selo e um `INSERT` — sem migration, sem deploy e sem mapa de rotulos duplicado no front-end, que le tudo de `GET /api/badges`. Foi tabela e nao enum porque nenhuma regra de negocio ramifica por selo: o valor so e validado, contado e exibido.
+- Selo descontinuado usa `ativo: false`. Ele sai do catalogo, mas continua aparecendo no placar de quem ja o recebeu — algo impossivel com enum, onde nao se remove um valor ainda referenciado.
+- Quem concede e **somente o restaurante**, e sempre sobre uma contratacao sua com status `CONCLUIDA` — a contratacao e a prova de que o trabalho foi entregue. O freelancer nao concede selos a si mesmo.
+- Cada selo vale **uma vez por contratacao** (`@@unique([hiringId, badgeSlug])`). Como o vinculo e por trabalho e nao por candidato, o mesmo selo se acumula ao longo de trabalhos diferentes.
+- A tabela `candidato_selos` e um log de concessoes: guarda `restaurante_id` (autoria) e `contratacao_id` (comprovacao).
+- Slug fora de forma responde `400`; slug bem-formado mas ausente ou inativo no catalogo responde `422`.
+- **O candidato tem apenas os selos que recebeu.** As rotas de consulta nunca devolvem selo com contagem zero: quem nao tem nenhum selo recebe `badges: []`. O catalogo do que pode ser concedido vive separado, em `GET /badges`.
+- Conceder (`POST /applications/:id/badges`) devolve **somente a concessao criada** (slug, nome, descricao, icone, `candidateId`, `hiringId` e `grantedAt`), nao o placar.
+- Revogar (`DELETE /applications/:id/badges/:badge`) devolve o placar atualizado do candidato, ja sem o selo caso aquela fosse a ultima concessao dele.
+- Placar com rotulo, icone, contagem por selo e data da ultima concessao: `GET /candidates/me/badges` para o freelancer, `GET /candidates/:id/badges` para o restaurante e `GET /applications/:id/badges` para os selos de um trabalho especifico.
 
 ## Testes
 

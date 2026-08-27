@@ -8,6 +8,8 @@ import { UserRepository } from '../domain/repositories/UserRepository';
 import { RefreshTokenRepository } from '../domain/repositories/RefreshTokenRepository';
 import { RestaurantRepository } from '../domain/repositories/RestaurantRepository';
 import { CandidateRepository } from '../domain/repositories/CandidateRepository';
+import { BadgeRepository } from '../domain/repositories/BadgeRepository';
+import { CandidateBadgeRepository } from '../domain/repositories/CandidateBadgeRepository';
 import { PositionRepository } from '../domain/repositories/PositionRepository';
 import { JobRepository } from '../domain/repositories/JobRepository';
 import { HiringRepository } from '../domain/repositories/HiringRepository';
@@ -31,8 +33,12 @@ import { GetCandidateOwnCpfUseCase } from '../application/use-cases/profiles/Get
 import { GetCandidateOwnPhoneUseCase } from '../application/use-cases/profiles/GetCandidateOwnPhoneUseCase';
 import { DeleteCandidateProfileUseCase } from '../application/use-cases/profiles/DeleteCandidateProfileUseCase';
 import { ListPositionsUseCase } from '../application/use-cases/profiles/ListPositionsUseCase';
-import { GrantCandidateBadgeUseCase } from '../application/use-cases/profiles/GrantCandidateBadgeUseCase';
-import { RevokeCandidateBadgeUseCase } from '../application/use-cases/profiles/RevokeCandidateBadgeUseCase';
+
+import { GrantCandidateBadgeUseCase } from '../application/use-cases/badges/GrantCandidateBadgeUseCase';
+import { RevokeCandidateBadgeUseCase } from '../application/use-cases/badges/RevokeCandidateBadgeUseCase';
+import { GetCandidateBadgesUseCase } from '../application/use-cases/badges/GetCandidateBadgesUseCase';
+import { ListHiringBadgesUseCase } from '../application/use-cases/badges/ListHiringBadgesUseCase';
+import { ListBadgesUseCase } from '../application/use-cases/badges/ListBadgesUseCase';
 
 import { CreateJobUseCase } from '../application/use-cases/jobs/CreateJobUseCase';
 import { UpdateJobUseCase } from '../application/use-cases/jobs/UpdateJobUseCase';
@@ -60,6 +66,8 @@ import { PrismaUserRepository } from '../infrastructure/database/repositories/Pr
 import { PrismaRefreshTokenRepository } from '../infrastructure/database/repositories/PrismaRefreshTokenRepository';
 import { PrismaRestaurantRepository } from '../infrastructure/database/repositories/PrismaRestaurantRepository';
 import { PrismaCandidateRepository } from '../infrastructure/database/repositories/PrismaCandidateRepository';
+import { PrismaBadgeRepository } from '../infrastructure/database/repositories/PrismaBadgeRepository';
+import { PrismaCandidateBadgeRepository } from '../infrastructure/database/repositories/PrismaCandidateBadgeRepository';
 import { PrismaPositionRepository } from '../infrastructure/database/repositories/PrismaPositionRepository';
 import { PrismaJobRepository } from '../infrastructure/database/repositories/PrismaJobRepository';
 import { PrismaHiringRepository } from '../infrastructure/database/repositories/PrismaHiringRepository';
@@ -71,6 +79,7 @@ import { ViaCepLookupProvider } from '../infrastructure/providers/address/ViaCep
 import { AuthController } from '../http/controllers/AuthController';
 import { RestaurantController } from '../http/controllers/RestaurantController';
 import { CandidateController } from '../http/controllers/CandidateController';
+import { BadgeController } from '../http/controllers/BadgeController';
 import { PositionController } from '../http/controllers/PositionController';
 import { JobController } from '../http/controllers/JobController';
 import { ApplicationController } from '../http/controllers/ApplicationController';
@@ -102,6 +111,16 @@ container.registerInstance<RestaurantRepository>(
 container.registerInstance<CandidateRepository>(
   TOKENS.CandidateRepository,
   new PrismaCandidateRepository(prisma),
+);
+
+container.registerInstance<BadgeRepository>(
+  TOKENS.BadgeRepository,
+  new PrismaBadgeRepository(prisma),
+);
+
+container.registerInstance<CandidateBadgeRepository>(
+  TOKENS.CandidateBadgeRepository,
+  new PrismaCandidateBadgeRepository(prisma),
 );
 
 container.registerInstance<PositionRepository>(
@@ -281,17 +300,50 @@ container.register(ListPositionsUseCase, {
     ),
 });
 
+// ============================================================
+// Use cases - Badges
+// ============================================================
+container.register(ListBadgesUseCase, {
+  useFactory: (c) =>
+    new ListBadgesUseCase(c.resolve<BadgeRepository>(TOKENS.BadgeRepository)),
+});
+
 container.register(GrantCandidateBadgeUseCase, {
   useFactory: (c) =>
     new GrantCandidateBadgeUseCase(
-      c.resolve<CandidateRepository>(TOKENS.CandidateRepository),
+      c.resolve<RestaurantRepository>(TOKENS.RestaurantRepository),
+      c.resolve<HiringRepository>(TOKENS.HiringRepository),
+      c.resolve<BadgeRepository>(TOKENS.BadgeRepository),
+      c.resolve<CandidateBadgeRepository>(TOKENS.CandidateBadgeRepository),
     ),
 });
 
 container.register(RevokeCandidateBadgeUseCase, {
   useFactory: (c) =>
     new RevokeCandidateBadgeUseCase(
+      c.resolve<RestaurantRepository>(TOKENS.RestaurantRepository),
+      c.resolve<HiringRepository>(TOKENS.HiringRepository),
+      c.resolve<BadgeRepository>(TOKENS.BadgeRepository),
+      c.resolve<CandidateBadgeRepository>(TOKENS.CandidateBadgeRepository),
+    ),
+});
+
+container.register(GetCandidateBadgesUseCase, {
+  useFactory: (c) =>
+    new GetCandidateBadgesUseCase(
       c.resolve<CandidateRepository>(TOKENS.CandidateRepository),
+      c.resolve<BadgeRepository>(TOKENS.BadgeRepository),
+      c.resolve<CandidateBadgeRepository>(TOKENS.CandidateBadgeRepository),
+    ),
+});
+
+container.register(ListHiringBadgesUseCase, {
+  useFactory: (c) =>
+    new ListHiringBadgesUseCase(
+      c.resolve<RestaurantRepository>(TOKENS.RestaurantRepository),
+      c.resolve<HiringRepository>(TOKENS.HiringRepository),
+      c.resolve<BadgeRepository>(TOKENS.BadgeRepository),
+      c.resolve<CandidateBadgeRepository>(TOKENS.CandidateBadgeRepository),
     ),
 });
 
@@ -484,14 +536,17 @@ container.register(CandidateController, {
       c.resolve(GetCandidateOwnCpfUseCase),
       c.resolve(GetCandidateOwnPhoneUseCase),
       c.resolve(DeleteCandidateProfileUseCase),
-      c.resolve(GrantCandidateBadgeUseCase),
-      c.resolve(RevokeCandidateBadgeUseCase),
+      c.resolve(GetCandidateBadgesUseCase),
       c.resolve(ListCandidateReviewsUseCase),
     ),
 });
 
 container.register(PositionController, {
   useFactory: (c) => new PositionController(c.resolve(ListPositionsUseCase)),
+});
+
+container.register(BadgeController, {
+  useFactory: (c) => new BadgeController(c.resolve(ListBadgesUseCase)),
 });
 
 container.register(JobController, {
@@ -520,6 +575,9 @@ container.register(ApplicationController, {
       c.resolve(ListJobApplicationsUseCase),
       c.resolve(AcceptCandidateUseCase),
       c.resolve(RejectCandidateUseCase),
+      c.resolve(GrantCandidateBadgeUseCase),
+      c.resolve(RevokeCandidateBadgeUseCase),
+      c.resolve(ListHiringBadgesUseCase),
     ),
 });
 

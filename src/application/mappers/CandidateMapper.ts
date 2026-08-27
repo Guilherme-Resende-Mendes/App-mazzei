@@ -13,10 +13,6 @@ export class CandidateMapper {
       positionId: candidate.positionId,
       overallRating: candidate.overallRating,
       bio: candidate.bio,
-      badges: candidate.badges.map((badge) => ({
-        badge: badge.badge,
-        grantedAt: badge.grantedAt.toISOString(),
-      })),
       active: candidate.active,
       createdAt: candidate.createdAt.toISOString(),
       updatedAt: candidate.updatedAt.toISOString(),

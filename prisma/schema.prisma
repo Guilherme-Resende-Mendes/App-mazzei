@@ -29,11 +29,6 @@ enum Area {
   BAR     @map("bar")
 }
 
-enum Badge {
-  PONTUAL  @map("pontual")
-  FLEXIVEL @map("flexivel")
-}
-
 enum JobStatus {
   ABERTA     @map("aberta")
   PREENCHIDA @map("preenchida")
@@ -126,27 +121,28 @@ model Restaurant {
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  user    User     @relation(fields: [userId], references: [id])
-  jobs    Job[]
-  hirings Hiring[]
+  user          User             @relation(fields: [userId], references: [id])
+  jobs          Job[]
+  hirings       Hiring[]
+  grantedBadges CandidateBadge[]
 
   @@map("restaurantes")
 }
 
 model Candidate {
-  id             String    @id @default(uuid()) @db.Uuid
-  userId         String    @unique @map("usuario_id") @db.Uuid
-  name           String    @map("nome") @db.VarChar(255)
-  document       String    @unique @map("documento") @db.VarChar(30)
-  address        Json      @map("endereco")
-  phone          String    @map("telefone") @db.VarChar(30)
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @unique @map("usuario_id") @db.Uuid
+  name          String    @map("nome") @db.VarChar(255)
+  document      String    @unique @map("documento") @db.VarChar(30)
+  address       Json      @map("endereco")
+  phone         String    @map("telefone") @db.VarChar(30)
   positionId    String    @map("cargo_id") @db.Uuid
   overallRating Decimal   @default(0) @map("nota_geral") @db.Decimal(3, 2)
-  bio            String?   @map("bio")
-  active         Boolean   @default(true) @map("ativo")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
+  bio           String?   @map("bio")
+  active        Boolean   @default(true) @map("ativo")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   user     User             @relation(fields: [userId], references: [id])
   position Position         @relation(fields: [positionId], references: [id])
@@ -157,14 +153,43 @@ model Candidate {
   @@map("candidatos")
 }
 
+/// Catalogo de selos administrado em runtime. `slug` e o identificador estavel
+/// usado pela API; `nome`, `descricao` e `icone` sao a apresentacao no front-end.
+/// Selos aposentados usam `ativo: false` para preservar o historico ja concedido.
+model Badge {
+  slug        String   @id @db.VarChar(50)
+  name        String   @map("nome") @db.VarChar(100)
+  description String?  @map("descricao")
+  icon        String?  @map("icone") @db.VarChar(100)
+  active      Boolean  @default(true) @map("ativo")
+  sortOrder   Int      @default(0) @map("ordem")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  grants CandidateBadge[]
+
+  @@index([active, sortOrder])
+  @@map("selos")
+}
+
+/// Log de concessoes: o mesmo selo pode ser concedido varias vezes ao candidato,
+/// sempre ancorado numa contratacao concluida do restaurante que concedeu.
 model CandidateBadge {
-  candidateId String   @map("candidato_id") @db.Uuid
-  badge       Badge    @map("selo")
-  grantedAt   DateTime @map("concedido_em") @db.Timestamptz(6)
+  id           String   @id @default(uuid()) @db.Uuid
+  candidateId  String   @map("candidato_id") @db.Uuid
+  restaurantId String   @map("restaurante_id") @db.Uuid
+  hiringId     String   @map("contratacao_id") @db.Uuid
+  badgeSlug    String   @map("selo") @db.VarChar(50)
+  grantedAt    DateTime @map("concedido_em") @db.Timestamptz(6)
 
-  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidate  Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  hiring     Hiring     @relation(fields: [hiringId], references: [id], onDelete: Cascade)
+  badge      Badge      @relation(fields: [badgeSlug], references: [slug])
 
-  @@id([candidateId, badge])
+  @@unique([hiringId, badgeSlug])
+  @@index([candidateId, badgeSlug])
+  @@index([restaurantId])
   @@map("candidato_selos")
 }
 
@@ -213,9 +238,10 @@ model Hiring {
   createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  job        Job        @relation(fields: [jobId], references: [id])
-  candidate  Candidate  @relation(fields: [candidateId], references: [id])
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  job        Job              @relation(fields: [jobId], references: [id])
+  candidate  Candidate        @relation(fields: [candidateId], references: [id])
+  restaurant Restaurant       @relation(fields: [restaurantId], references: [id])
+  badges     CandidateBadge[]
 
   @@unique([jobId, candidateId])
   @@index([jobId])
